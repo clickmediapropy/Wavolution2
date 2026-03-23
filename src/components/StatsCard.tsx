@@ -1,5 +1,5 @@
-import { useEffect, useRef, type ReactNode } from "react";
-import CountUp from "react-countup";
+import { useRef, type ReactNode } from "react";
+import { useCountUp } from "react-countup";
 
 interface StatsCardProps {
   icon: ReactNode;
@@ -8,15 +8,13 @@ interface StatsCardProps {
   value: string | number;
 }
 
+function AnimatedNumber({ value }: { value: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useCountUp({ ref: ref as React.RefObject<HTMLElement>, end: value, duration: 1, separator: "," });
+  return <span ref={ref} />;
+}
+
 export function StatsCard({ icon, iconBg, label, value }: StatsCardProps) {
-  const prevValue = useRef<number>(0);
-
-  useEffect(() => {
-    if (typeof value === "number") {
-      prevValue.current = value;
-    }
-  }, [value]);
-
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 transition-transform hover:-translate-y-0.5 hover:border-zinc-700">
       <div className="flex items-center gap-3 mb-3">
@@ -28,16 +26,7 @@ export function StatsCard({ icon, iconBg, label, value }: StatsCardProps) {
         <span className="text-sm text-zinc-500">{label}</span>
       </div>
       <span className="text-3xl font-bold text-zinc-100">
-        {typeof value === "number" ? (
-          <CountUp
-            start={prevValue.current}
-            end={value}
-            duration={1}
-            separator=","
-          />
-        ) : (
-          value
-        )}
+        {typeof value === "number" ? <AnimatedNumber value={value} /> : value}
       </span>
     </div>
   );

@@ -3,12 +3,18 @@ import { describe, it, expect, vi } from "vitest";
 import { StatsCard } from "@/components/StatsCard";
 import { Users } from "lucide-react";
 
+// Mock the named export (useCountUp) — mirrors real import path, no default export mock
 vi.mock("react-countup", () => ({
-  default: ({ end }: { end: number }) => <span>{end}</span>,
+  useCountUp: ({ ref, end }: { ref: { current: HTMLElement | null }; end: number }) => {
+    // Use queueMicrotask so ref.current is attached before we write
+    queueMicrotask(() => {
+      if (ref.current) ref.current.textContent = String(end);
+    });
+  },
 }));
 
 describe("StatsCard", () => {
-  it("renders label and value", () => {
+  it("renders label and value", async () => {
     render(
       <StatsCard
         icon={<Users data-testid="icon" />}
@@ -19,7 +25,8 @@ describe("StatsCard", () => {
     );
 
     expect(screen.getByText("Total Contacts")).toBeInTheDocument();
-    expect(screen.getByText("42")).toBeInTheDocument();
+    // useCountUp writes to the ref async via queueMicrotask
+    await screen.findByText("42");
   });
 
   it("renders string values", () => {
