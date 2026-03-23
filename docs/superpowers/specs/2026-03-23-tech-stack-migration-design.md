@@ -108,18 +108,19 @@ Indexes: `by_username` on `["username"]`
 
 Indexes: `by_user` on `["userId"]`, `by_user_phone` on `["userId", "phone"]`
 
-Search index: `search_contacts` on `name` and `phone` fields (for contact search functionality). Convex full-text search replaces SQL `LIKE` queries.
+Search index: `search_by_name` with `searchField: "name"`, `filterFields: ["userId"]`. Convex supports only one `searchField` per index, so phone search uses the `by_user_phone` index with prefix matching. For combined search, add a synthetic `searchText` field (concatenated name + phone) if needed later.
 
 ### `messages` table
 
 | Field | Type | Notes |
 |-------|------|-------|
 | `userId` | `Id<"users">` | Foreign key |
+| `campaignId` | `Id<"campaigns">` (optional) | Link to campaign (null for single sends) |
 | `phone` | `string` | |
 | `message` | `string` | |
 | `status` | `string` | `"sent"` / `"failed"` |
 
-Indexes: `by_user` on `["userId"]`
+Indexes: `by_user` on `["userId"]`, `by_campaign` on `["campaignId"]`, `by_user_and_phone` on `["userId", "phone"]`
 
 ### `campaigns` table
 
@@ -145,7 +146,7 @@ Indexes: `by_user` on `["userId"]`
 Campaign media files are stored using **Convex file storage**. Flow:
 1. React uploads media via `storage.generateUploadUrl()` → returns `Id<"_storage">`
 2. Storage IDs saved on the campaign document in `mediaStorageIds`
-3. VPS worker retrieves media via `storage.getUrl(storageId)` → downloads file → converts to base64 → sends via Evolution API
+3. VPS worker retrieves public URLs via `storage.getUrl(storageId)` → passes URL directly to Evolution API's `media` field (Evolution API accepts URLs natively — no base64 conversion needed)
 4. After campaign completes, media files can be cleaned up from Convex storage
 
 This handles the gap between upload time and campaign processing (which may be hours later). Convex file storage supports files up to 256MB, well above the 50MB video limit.
@@ -164,6 +165,8 @@ Indexes: `by_token` on `["token"]`
 - Convex auto-generates `_id` (unique ID) and `_creationTime` (timestamp) on every document.
 - No `password_reset_tokens` table needed (no email-based password reset).
 - Campaigns are now **persisted** — survives restarts, enables resume after crashes.
+- **Session cleanup:** A Convex cron job (`convex/crons.ts`) runs hourly to delete expired sessions from the `sessions` table.
+- **Auth functions use `"use node"`:** `login` and `register` are Convex actions (not mutations) because bcrypt requires the Node.js runtime. They call internal mutations to write data.
 
 ---
 
@@ -184,6 +187,7 @@ Indexes: `by_token` on `["token"]`
 | `/campaigns/:id/status` | `CampaignStatusPage` | Real-time campaign progress |
 | `/setup` | `SetupWhatsAppPage` | Evolution API instance creation |
 | `/connect` | `ConnectWhatsAppPage` | QR code scanning |
+| `*` | `NotFoundPage` | Catch-all 404 page |
 
 ### Shared Components
 
@@ -198,12 +202,14 @@ Indexes: `by_token` on `["token"]`
 | `CampaignProgress` | Real-time progress bar + stats (Convex subscription) |
 | `MediaUpload` | File upload with preview + validation |
 | `FlashMessage` | Toast notifications (shadcn `Sonner`) |
+| `LoadingSpinner` | Loading state for Convex queries (`useQuery` returns `undefined` while loading) |
+| `ErrorBoundary` | Error boundary for query/mutation failures |
 
 ### Auth Flow
 
 Session-based custom auth. Convex doesn't have HTTP headers on WebSocket calls, so the session token is passed as an argument to every Convex function.
 
-1. `LoginPage` calls Convex mutation `login({ username, password })` → validates credentials, creates session document, returns `{ token, userId }`
+1. `LoginPage` calls Convex **action** `login({ username, password })` (must be an action with `"use node"` directive because bcrypt requires Node.js runtime) → validates credentials, creates session document via internal mutation, returns `{ token, userId }`
 2. Token stored in `localStorage`. A React context provider (`AuthProvider`) reads the token and passes it to all Convex calls.
 3. Every Convex query/mutation that requires auth takes a `sessionToken: string` parameter. A shared `getAuthenticatedUser(ctx, sessionToken)` helper validates the token against the `sessions` table and returns the user document (or throws).
 4. `ProtectedRoute` calls `useQuery(api.auth.me, { sessionToken })` — if it returns null or throws, redirects to `/`.
@@ -213,8 +219,24 @@ Session-based custom auth. Convex doesn't have HTTP headers on WebSocket calls, 
 ### Styling
 - **Tailwind CSS** installed via PostCSS (not CDN)
 - **shadcn/ui** for pre-built accessible components
+- **Lucide React** for icons (shadcn/ui's default icon library — replaces Font Awesome CDN to eliminate third-party script and CSS conflicts)
 - Same visual design as current app (blue/purple accent, white cards, glass navbar)
-- Font Awesome for icons (same as current)
+
+### Convex Integration Notes
+- **Pagination:** Use `usePaginatedQuery` with cursor-based pagination (Convex has no OFFSET/LIMIT). The `ContactTable` component uses `loadMore()` pattern.
+- **Loading states:** Every `useQuery` returns `undefined` while loading. All pages must handle loading/error/data states.
+- **Provider setup:** App root wraps in `ConvexProvider` with `ConvexReactClient`. Auth context wraps inside that.
+- **`cn()` utility:** Required by all shadcn/ui components — created by `npx shadcn@latest init` at `src/lib/utils.ts`.
+
+### Vercel Deployment Config
+
+`vercel.json` must include SPA rewrites for client-side routing:
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+Without this, direct navigation to any route except `/` will return 404.
 
 ---
 
@@ -340,13 +362,15 @@ wavolution2/
 │   │   ├── SetupWhatsAppPage.tsx
 │   │   └── ConnectWhatsAppPage.tsx
 │   ├── lib/                      # Utilities
-│   │   └── auth.ts               # Auth helpers (token management)
-│   ├── App.tsx                   # Router setup
+│   │   ├── auth.ts               # Auth context provider + token management
+│   │   └── utils.ts              # cn() utility for shadcn/ui
+│   ├── App.tsx                   # Router setup + ConvexProvider + AuthProvider
 │   ├── main.tsx                  # Entry point
 │   └── index.css                 # Tailwind imports
 ├── convex/                       # Convex backend
 │   ├── schema.ts                 # Table definitions
-│   ├── auth.ts                   # Login/register/logout mutations + me query
+│   ├── auth.ts                   # Login/register/logout actions ("use node") + me query
+│   ├── crons.ts                  # Scheduled jobs (session cleanup)
 │   ├── lib/
 │   │   └── auth.ts               # getAuthenticatedUser(ctx, sessionToken) helper
 │   ├── users.ts                  # User queries and mutations
