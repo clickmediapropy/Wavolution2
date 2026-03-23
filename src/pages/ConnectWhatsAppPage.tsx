@@ -52,7 +52,7 @@ export function ConnectWhatsAppPage() {
 
     const interval = setInterval(async () => {
       try {
-        const result = await checkStatus({ instanceName });
+        const result = await checkStatus({ instanceName, instanceId: "" as any });
         if (result.state === "open") {
           toast.success("WhatsApp connected!");
           navigate("/send");

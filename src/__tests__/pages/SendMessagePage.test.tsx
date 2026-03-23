@@ -17,12 +17,15 @@ vi.mock("convex/react", () => ({
 describe("SendMessagePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseQuery.mockReturnValue({
-      _id: "user123",
-      instanceCreated: true,
-      whatsappConnected: true,
-      evolutionInstanceName: "hub_abc12345",
-    });
+    // listConnected returns one connected instance
+    mockUseQuery.mockReturnValue([
+      {
+        _id: "inst1",
+        name: "hub_abc12345",
+        whatsappConnected: true,
+        whatsappNumber: "+5491100000000",
+      },
+    ]);
     mockUsePaginatedQuery.mockReturnValue({
       results: [
         { _id: "c1", phone: "+5491112345678", name: "Alice" },
@@ -76,7 +79,7 @@ describe("SendMessagePage", () => {
     expect(screen.getByRole("button", { name: /send/i })).toBeDisabled();
   });
 
-  it("shows loading when user is undefined", () => {
+  it("shows loading when instances query is undefined", () => {
     mockUseQuery.mockReturnValue(undefined);
 
     render(

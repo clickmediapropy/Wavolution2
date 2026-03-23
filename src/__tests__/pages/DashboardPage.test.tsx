@@ -11,18 +11,27 @@ vi.mock("convex/react", () => ({
   usePaginatedQuery: (...args: any[]) => mockUsePaginatedQuery(...args),
 }));
 
+// Mock react-countup used by StatsCard
+vi.mock("react-countup", () => ({
+  useCountUp: ({ ref, end }: { ref: { current: HTMLElement | null }; end: number }) => {
+    queueMicrotask(() => {
+      if (ref.current) ref.current.textContent = String(end);
+    });
+  },
+}));
+
 describe("DashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // DashboardPage calls useQuery 4 times in order:
-    // 1. currentUser, 2. contacts.count, 3. messages.count, 4. campaigns.listByUser
+    // DashboardPage calls useQuery 4 times:
+    // 1. contacts.count, 2. messages.count, 3. campaigns.listByUser, 4. instances.count
     let callIndex = 0;
     mockUseQuery.mockImplementation(() => {
       const i = callIndex++;
-      if (i === 0) return { _id: "u1", whatsappConnected: true };
-      if (i === 1) return 42; // contactCount
-      if (i === 2) return 15; // messageCount
-      if (i === 3) return [{ _id: "camp1" }]; // campaigns
+      if (i === 0) return 42; // contactCount
+      if (i === 1) return 15; // messageCount
+      if (i === 2) return [{ _id: "camp1" }]; // campaigns
+      if (i === 3) return { total: 3, connected: 2 }; // instances.count
       return null;
     });
     mockUsePaginatedQuery.mockReturnValue({

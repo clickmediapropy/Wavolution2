@@ -23,6 +23,7 @@ export const logMessage = mutation({
     phone: v.string(),
     message: v.string(),
     status: v.string(),
+    instanceId: v.optional(v.id("instances")),
     campaignId: v.optional(v.id("campaigns")),
   },
   handler: async (ctx, args) => {
@@ -30,6 +31,7 @@ export const logMessage = mutation({
     if (!userId) throw new Error("Not authenticated");
     return await ctx.db.insert("messages", {
       userId,
+      instanceId: args.instanceId,
       phone: args.phone,
       message: args.message,
       status: args.status,

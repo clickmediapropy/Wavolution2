@@ -15,7 +15,7 @@ type MediaData = {
 };
 
 export function SendMessagePage() {
-  const user = useQuery(api.users.currentUser);
+  const connectedInstances = useQuery(api.instances.listConnected);
   const contacts = usePaginatedQuery(
     api.contacts.list,
     {},
@@ -25,12 +25,16 @@ export function SendMessagePage() {
   const sendMediaAction = useAction(api.evolution.sendMedia);
   const logMessage = useMutation(api.messages.logMessage);
 
+  const [selectedInstanceId, setSelectedInstanceId] = useState("");
   const [selectedPhone, setSelectedPhone] = useState("");
   const [message, setMessage] = useState("");
   const [media, setMedia] = useState<MediaData | null>(null);
   const [isSending, setIsSending] = useState(false);
 
-  const instanceName = user?.evolutionInstanceName;
+  const selectedInstance = connectedInstances?.find(
+    (i) => i._id === selectedInstanceId,
+  );
+  const instanceName = selectedInstance?.name;
 
   const handleMediaUpload = useCallback((data: MediaData) => {
     setMedia(data);
@@ -62,6 +66,7 @@ export function SendMessagePage() {
         phone: selectedPhone,
         message: message.trim(),
         status: "sent",
+        instanceId: selectedInstanceId as Id<"instances">,
       });
 
       toast.success("Message sent!");
@@ -76,6 +81,7 @@ export function SendMessagePage() {
         phone: selectedPhone,
         message: message.trim(),
         status: "failed",
+        instanceId: selectedInstanceId as Id<"instances">,
       }).catch(() => {});
     } finally {
       setIsSending(false);
@@ -84,13 +90,14 @@ export function SendMessagePage() {
     selectedPhone,
     message,
     instanceName,
+    selectedInstanceId,
     media,
     sendText,
     sendMediaAction,
     logMessage,
   ]);
 
-  if (user === undefined) {
+  if (connectedInstances === undefined) {
     return (
       <div role="status" className="flex items-center justify-center py-20">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
@@ -98,7 +105,20 @@ export function SendMessagePage() {
     );
   }
 
-  const canSend = selectedPhone && message.trim() && !isSending;
+  // Auto-select if only one instance
+  if (connectedInstances.length === 1 && !selectedInstanceId) {
+    setSelectedInstanceId(connectedInstances[0]!._id);
+  }
+
+  const canSend =
+    selectedPhone && message.trim() && instanceName && !isSending;
+
+  const instanceOptions = connectedInstances.map((inst) => ({
+    value: inst._id,
+    label: inst.whatsappNumber
+      ? `${inst.name} (${inst.whatsappNumber})`
+      : inst.name,
+  }));
 
   const contactOptions = contacts.results.map((contact) => ({
     value: contact.phone,
@@ -121,6 +141,21 @@ export function SendMessagePage() {
         {/* Form card */}
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6">
           <div className="space-y-4">
+            {/* Instance Selector — only show if multiple instances */}
+            {connectedInstances.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">
+                  Send From
+                </label>
+                <SearchableCombobox
+                  options={instanceOptions}
+                  value={selectedInstanceId}
+                  onChange={setSelectedInstanceId}
+                  placeholder="Choose an instance..."
+                />
+              </div>
+            )}
+
             {/* Contact Selector */}
             <div>
               <label

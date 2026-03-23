@@ -19,6 +19,7 @@ async function getAuthedUserId(
 export const create = mutation({
   args: {
     name: v.string(),
+    instanceId: v.optional(v.id("instances")),
     recipientType: v.string(), // "all" | "pending" | "manual"
     selectedContactIds: v.optional(v.array(v.id("contacts"))),
     messageTemplate: v.string(),
@@ -45,6 +46,7 @@ export const create = mutation({
 
     return await ctx.db.insert("campaigns", {
       userId,
+      instanceId: args.instanceId,
       name: args.name.trim(),
       status: "draft",
       recipientType: args.recipientType,

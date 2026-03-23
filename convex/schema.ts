@@ -32,6 +32,18 @@ const schema = defineSchema({
   authVerifiers: authTables.authVerifiers,
   authRateLimits: authTables.authRateLimits,
 
+  // WhatsApp instances (one user can have many)
+  instances: defineTable({
+    userId: v.id("users"),
+    name: v.string(), // Evolution API instance name (unique per user)
+    apiKey: v.optional(v.string()), // Instance-specific API key from Evolution
+    whatsappConnected: v.boolean(),
+    whatsappNumber: v.optional(v.string()),
+    connectionStatus: v.string(), // pending | open | close | connecting
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_name", ["userId", "name"]),
+
   // App tables
   contacts: defineTable({
     userId: v.id("users"),
@@ -49,6 +61,7 @@ const schema = defineSchema({
 
   messages: defineTable({
     userId: v.id("users"),
+    instanceId: v.optional(v.id("instances")),
     campaignId: v.optional(v.id("campaigns")),
     phone: v.string(),
     message: v.string(),
@@ -60,6 +73,7 @@ const schema = defineSchema({
 
   campaigns: defineTable({
     userId: v.id("users"),
+    instanceId: v.optional(v.id("instances")),
     name: v.string(),
     status: v.string(), // draft | running | completed | stopped
     recipientType: v.string(), // all | pending | manual

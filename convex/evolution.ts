@@ -17,7 +17,7 @@ function getGlobalApiKey(): string {
   return key;
 }
 
-// Create a new Evolution API instance for the user
+// Create a new Evolution API instance and store it in the instances table
 export const createInstance = action({
   args: { instanceName: v.string() },
   handler: async (ctx, args) => {
@@ -47,14 +47,13 @@ export const createInstance = action({
 
     const data = await res.json();
 
-    await ctx.runMutation(api.users.updateWhatsAppState, {
-      evolutionInstanceName: args.instanceName,
-      evolutionApiKey: data.hash || undefined,
-      instanceCreated: true,
-      connectionStatus: "pending",
+    // Store in instances table
+    const instanceId: string = await ctx.runMutation(api.instances.create, {
+      name: args.instanceName,
+      apiKey: data.hash || undefined,
     });
 
-    return data;
+    return { ...data, instanceId } as Record<string, unknown>;
   },
 });
 
@@ -85,9 +84,12 @@ export const getQrCode = action({
   },
 });
 
-// Check if WhatsApp is connected
+// Check if WhatsApp is connected — updates the instances table
 export const checkConnectionStatus = action({
-  args: { instanceName: v.string() },
+  args: {
+    instanceName: v.string(),
+    instanceId: v.id("instances"),
+  },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
@@ -111,16 +113,11 @@ export const checkConnectionStatus = action({
     const data = await res.json();
     const state = data.instance?.state || data.state || "unknown";
 
-    if (state === "open") {
-      await ctx.runMutation(api.users.updateWhatsAppState, {
-        whatsappConnected: true,
-        connectionStatus: "open",
-      });
-    } else {
-      await ctx.runMutation(api.users.updateWhatsAppState, {
-        connectionStatus: state,
-      });
-    }
+    await ctx.runMutation(api.instances.updateState, {
+      id: args.instanceId,
+      whatsappConnected: state === "open",
+      connectionStatus: state,
+    });
 
     return { state };
   },
@@ -220,9 +217,12 @@ export const sendMedia = action({
   },
 });
 
-// Delete an instance
+// Delete an instance from Evolution API and remove from instances table
 export const deleteInstance = action({
-  args: { instanceName: v.string() },
+  args: {
+    instanceName: v.string(),
+    instanceId: v.id("instances"),
+  },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
@@ -243,13 +243,8 @@ export const deleteInstance = action({
       throw new Error(`Failed to delete instance: ${text}`);
     }
 
-    await ctx.runMutation(api.users.updateWhatsAppState, {
-      instanceCreated: false,
-      whatsappConnected: false,
-      connectionStatus: undefined,
-      evolutionInstanceName: undefined,
-      evolutionApiKey: undefined,
-    });
+    // Remove from instances table
+    await ctx.runMutation(api.instances.remove, { id: args.instanceId });
 
     return { success: true };
   },

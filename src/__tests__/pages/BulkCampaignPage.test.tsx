@@ -5,10 +5,11 @@ import { BulkCampaignPage } from "@/pages/BulkCampaignPage";
 
 const mockUsePaginatedQuery = vi.fn();
 const mockUseMutation = vi.fn();
+const mockUseQuery = vi.fn();
 
 vi.mock("convex/react", () => ({
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
-  useQuery: () => ({ _id: "user1" }),
+  useQuery: (...args: any[]) => mockUseQuery(...args),
   useMutation: (...args: any[]) => mockUseMutation(...args),
   useAction: () => vi.fn(),
   usePaginatedQuery: (...args: any[]) => mockUsePaginatedQuery(...args),
@@ -27,6 +28,10 @@ describe("BulkCampaignPage", () => {
       loadMore: vi.fn(),
     });
     mockUseMutation.mockReturnValue(vi.fn());
+    // listConnected returns one instance
+    mockUseQuery.mockReturnValue([
+      { _id: "inst1", name: "hub_test", whatsappConnected: true },
+    ]);
   });
 
   it("renders page heading", () => {

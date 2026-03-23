@@ -7,13 +7,13 @@ import { RecentMessages } from "@/components/RecentMessages";
 import { QuickActions } from "@/components/QuickActions";
 
 export function DashboardPage() {
-  const user = useQuery(api.users.currentUser);
   const contactCount = useQuery(api.contacts.count);
   const messageCount = useQuery(api.messages.count);
   const campaigns = useQuery(api.campaigns.listByUser);
-  const connected = user?.whatsappConnected ?? false;
+  const instanceCounts = useQuery(api.instances.count);
 
   const campaignCount = campaigns?.length ?? 0;
+  const connected = (instanceCounts?.connected ?? 0) > 0;
 
   return (
     <div className="animate-fadeIn">

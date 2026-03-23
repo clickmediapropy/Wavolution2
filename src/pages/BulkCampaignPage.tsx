@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation, usePaginatedQuery } from "convex/react";
+import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Loader2, Megaphone, ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { MessageTemplateEditor } from "@/components/MessageTemplateEditor";
 import { MessagePreview } from "@/components/MessagePreview";
 import { MediaUpload } from "@/components/MediaUpload";
 import { DelayConfig } from "@/components/DelayConfig";
+import { SearchableCombobox } from "@/components/SearchableCombobox";
 import type { Id } from "@convex/_generated/dataModel";
 
 type MediaData = {
@@ -31,6 +32,7 @@ export function BulkCampaignPage() {
     {},
     { initialNumItems: 500 },
   );
+  const connectedInstances = useQuery(api.instances.listConnected);
   const createCampaign = useMutation(api.campaigns.create);
   const startCampaign = useMutation(api.campaigns.start);
 
@@ -44,6 +46,7 @@ export function BulkCampaignPage() {
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
 
   // Step 2: Message
+  const [selectedInstanceId, setSelectedInstanceId] = useState("");
   const [campaignName, setCampaignName] = useState("");
   const [messageTemplate, setMessageTemplate] = useState("");
   const [media, setMedia] = useState<MediaData | null>(null);
@@ -62,8 +65,21 @@ export function BulkCampaignPage() {
     }
   }, [recipientType, allContacts, selectedContactIds]);
 
+  // Auto-select if only one connected instance
+  if (connectedInstances?.length === 1 && !selectedInstanceId) {
+    setSelectedInstanceId(connectedInstances[0]!._id);
+  }
+
+  const instanceOptions = (connectedInstances ?? []).map((inst) => ({
+    value: inst._id,
+    label: inst.whatsappNumber
+      ? `${inst.name} (${inst.whatsappNumber})`
+      : inst.name,
+  }));
+
   const canProceedStep0 = recipientCount > 0;
-  const canProceedStep1 = campaignName.trim() && messageTemplate.trim();
+  const canProceedStep1 =
+    campaignName.trim() && messageTemplate.trim() && selectedInstanceId;
 
   const handleMediaUpload = useCallback((data: MediaData) => {
     setMedia(data);
@@ -74,6 +90,9 @@ export function BulkCampaignPage() {
     try {
       const campaignId = await createCampaign({
         name: campaignName.trim(),
+        instanceId: selectedInstanceId
+          ? (selectedInstanceId as Id<"instances">)
+          : undefined,
         recipientType,
         selectedContactIds:
           recipientType === "manual"
@@ -137,6 +156,21 @@ export function BulkCampaignPage() {
         {/* Step 2: Message */}
         {currentStep === 1 && (
           <div className="space-y-6">
+            {/* Instance selector — only show if multiple */}
+            {instanceOptions.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">
+                  Send From Instance
+                </label>
+                <SearchableCombobox
+                  options={instanceOptions}
+                  value={selectedInstanceId}
+                  onChange={setSelectedInstanceId}
+                  placeholder="Choose a WhatsApp instance..."
+                />
+              </div>
+            )}
+
             <div>
               <label
                 htmlFor="campaign-name"
@@ -177,6 +211,13 @@ export function BulkCampaignPage() {
                 <p className="text-xs text-zinc-500 mb-1">Campaign Name</p>
                 <p className="text-sm font-medium text-zinc-200">
                   {campaignName}
+                </p>
+              </div>
+              <div className="bg-zinc-800 rounded-lg p-4">
+                <p className="text-xs text-zinc-500 mb-1">Instance</p>
+                <p className="text-sm font-medium text-zinc-200">
+                  {connectedInstances?.find((i) => i._id === selectedInstanceId)
+                    ?.name ?? "—"}
                 </p>
               </div>
               <div className="bg-zinc-800 rounded-lg p-4">
