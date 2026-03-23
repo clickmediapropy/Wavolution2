@@ -83,7 +83,7 @@ export const start = mutation({
   },
 });
 
-// Stop a running campaign
+// Stop a running or paused campaign
 export const stop = mutation({
   args: { id: v.id("campaigns") },
   handler: async (ctx, args) => {
@@ -92,14 +92,46 @@ export const stop = mutation({
     if (!campaign || campaign.userId !== userId) {
       throw new Error("Campaign not found");
     }
-    if (campaign.status !== "running") {
-      throw new Error("Only running campaigns can be stopped");
+    if (campaign.status !== "running" && campaign.status !== "paused") {
+      throw new Error("Only running or paused campaigns can be stopped");
     }
 
     await ctx.db.patch(args.id, {
       status: "stopped",
       completedAt: Date.now(),
     });
+  },
+});
+
+// Pause a running campaign
+export const pause = mutation({
+  args: { id: v.id("campaigns") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthedUserId(ctx);
+    const campaign = await ctx.db.get(args.id);
+    if (!campaign || campaign.userId !== userId) {
+      throw new Error("Campaign not found");
+    }
+    if (campaign.status !== "running") {
+      throw new Error("Only running campaigns can be paused");
+    }
+    await ctx.db.patch(args.id, { status: "paused" });
+  },
+});
+
+// Resume a paused campaign
+export const resume = mutation({
+  args: { id: v.id("campaigns") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthedUserId(ctx);
+    const campaign = await ctx.db.get(args.id);
+    if (!campaign || campaign.userId !== userId) {
+      throw new Error("Campaign not found");
+    }
+    if (campaign.status !== "paused") {
+      throw new Error("Only paused campaigns can be resumed");
+    }
+    await ctx.db.patch(args.id, { status: "running" });
   },
 });
 

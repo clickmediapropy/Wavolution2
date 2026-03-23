@@ -19,7 +19,8 @@ describe("ContactFormDialog", () => {
         screen.getByRole("heading", { name: "Add Contact" }),
       ).toBeInTheDocument();
       expect(screen.getByLabelText(/phone/i)).toHaveValue("");
-      expect(screen.getByLabelText(/name/i)).toHaveValue("");
+      expect(screen.getByLabelText("Name")).toHaveValue("");
+      expect(screen.getByLabelText("Last Name")).toHaveValue("");
       expect(
         screen.getByRole("button", { name: /add contact/i }),
       ).toBeInTheDocument();
@@ -32,14 +33,18 @@ describe("ContactFormDialog", () => {
       fireEvent.change(screen.getByLabelText(/phone/i), {
         target: { value: "+595981123456" },
       });
-      fireEvent.change(screen.getByLabelText(/name/i), {
+      fireEvent.change(screen.getByLabelText("Name"), {
         target: { value: "Carlos" },
+      });
+      fireEvent.change(screen.getByLabelText("Last Name"), {
+        target: { value: "Lopez" },
       });
       fireEvent.click(screen.getByRole("button", { name: /add contact/i }));
 
       expect(onSubmit).toHaveBeenCalledWith({
         phone: "+595981123456",
-        name: "Carlos",
+        firstName: "Carlos",
+        lastName: "Lopez",
       });
       // Verify no id property at all
       expect(onSubmit.mock.calls[0]?.[0]).not.toHaveProperty("id");
@@ -53,14 +58,15 @@ describe("ContactFormDialog", () => {
   });
 
   describe("edit mode (with contact prop)", () => {
-    const contact = { _id: "c1", phone: "+1234567890", name: "Alice" };
+    const contact = { _id: "c1", phone: "+1234567890", firstName: "Alice", lastName: "Smith" };
 
     it("renders with 'Edit Contact' title and pre-filled fields", () => {
       render(<ContactFormDialog {...baseProps} contact={contact} />);
 
       expect(screen.getByText("Edit Contact")).toBeInTheDocument();
       expect(screen.getByLabelText(/phone/i)).toHaveValue("+1234567890");
-      expect(screen.getByLabelText(/name/i)).toHaveValue("Alice");
+      expect(screen.getByLabelText("Name")).toHaveValue("Alice");
+      expect(screen.getByLabelText("Last Name")).toHaveValue("Smith");
       expect(
         screen.getByRole("button", { name: /save changes/i }),
       ).toBeInTheDocument();
@@ -72,15 +78,19 @@ describe("ContactFormDialog", () => {
         <ContactFormDialog {...baseProps} onSubmit={onSubmit} contact={contact} />,
       );
 
-      fireEvent.change(screen.getByLabelText(/name/i), {
+      fireEvent.change(screen.getByLabelText("Name"), {
         target: { value: "Alice Updated" },
+      });
+      fireEvent.change(screen.getByLabelText("Last Name"), {
+        target: { value: "Smith Updated" },
       });
       fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
       expect(onSubmit).toHaveBeenCalledWith({
         id: "c1",
         phone: "+1234567890",
-        name: "Alice Updated",
+        firstName: "Alice Updated",
+        lastName: "Smith Updated",
       });
     });
 
@@ -97,7 +107,8 @@ describe("ContactFormDialog", () => {
       render(<ContactFormDialog {...baseProps} contact={noNameContact} />);
 
       expect(screen.getByLabelText(/phone/i)).toHaveValue("+9876543210");
-      expect(screen.getByLabelText(/name/i)).toHaveValue("");
+      expect(screen.getByLabelText("Name")).toHaveValue("");
+      expect(screen.getByLabelText("Last Name")).toHaveValue("");
     });
   });
 

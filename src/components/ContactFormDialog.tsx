@@ -4,13 +4,14 @@ import { X } from "lucide-react";
 interface ContactFormContact {
   _id: string;
   phone: string;
-  name?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 interface ContactFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: { id?: string; phone: string; name: string }) => void;
+  onSubmit: (data: { id?: string; phone: string; firstName: string; lastName: string }) => void;
   error: string;
   isSubmitting: boolean;
   /** When provided, dialog opens in edit mode with pre-filled fields */
@@ -26,7 +27,8 @@ export function ContactFormDialog({
   contact,
 }: ContactFormDialogProps) {
   const [phone, setPhone] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
 
   const isEditMode = !!contact;
 
@@ -34,10 +36,12 @@ export function ContactFormDialog({
     if (isOpen) {
       if (contact) {
         setPhone(contact.phone);
-        setName(contact.name ?? "");
+        setFirstName(contact.firstName ?? "");
+        setLastName(contact.lastName ?? "");
       } else {
         setPhone("");
-        setName("");
+        setFirstName("");
+        setLastName("");
       }
     }
   }, [isOpen, contact]);
@@ -47,9 +51,9 @@ export function ContactFormDialog({
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (isEditMode) {
-      onSubmit({ id: contact!._id, phone, name });
+      onSubmit({ id: contact!._id, phone, firstName, lastName });
     } else {
-      onSubmit({ phone, name });
+      onSubmit({ phone, firstName, lastName });
     }
   }
 
@@ -115,21 +119,39 @@ export function ContactFormDialog({
             </p>
           </div>
 
-          <div>
-            <label
-              htmlFor={`${fieldPrefix}-name`}
-              className="block text-sm font-medium text-zinc-300 mb-1"
-            >
-              Name
-            </label>
-            <input
-              id={`${fieldPrefix}-name`}
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder:text-zinc-500 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none"
-              placeholder="Contact name (optional)"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor={`${fieldPrefix}-firstName`}
+                className="block text-sm font-medium text-zinc-300 mb-1"
+              >
+                Name
+              </label>
+              <input
+                id={`${fieldPrefix}-firstName`}
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder:text-zinc-500 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none"
+                placeholder="First name"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor={`${fieldPrefix}-lastName`}
+                className="block text-sm font-medium text-zinc-300 mb-1"
+              >
+                Last Name
+              </label>
+              <input
+                id={`${fieldPrefix}-lastName`}
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder:text-zinc-500 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none"
+                placeholder="Last name"
+              />
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">

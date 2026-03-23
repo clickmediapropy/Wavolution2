@@ -17,6 +17,22 @@ export const count = query({
   },
 });
 
+// Count messages sent today
+export const countToday = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+    return messages.filter((m) => m._creationTime > todayStart.getTime()).length;
+  },
+});
+
 // Log a sent message
 export const logMessage = mutation({
   args: {
@@ -37,6 +53,21 @@ export const logMessage = mutation({
       status: args.status,
       campaignId: args.campaignId,
     });
+  },
+});
+
+// Count messages sent in the last N minutes (for rate limiting)
+export const countRecent = query({
+  args: { minutes: v.number() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const cutoff = Date.now() - args.minutes * 60 * 1000;
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+    return messages.filter((m) => m._creationTime > cutoff).length;
   },
 });
 

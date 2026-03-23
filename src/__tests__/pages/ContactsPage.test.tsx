@@ -88,8 +88,8 @@ describe("ContactsPage", () => {
   it("filters contacts by status when chip clicked", () => {
     mockUsePaginatedQuery.mockReturnValue({
       results: [
-        { _id: "c1", _creationTime: 1000, userId: "u1", phone: "+1111111111", name: "Alice", status: "pending" },
-        { _id: "c2", _creationTime: 900, userId: "u1", phone: "+2222222222", name: "Bob", status: "sent" },
+        { _id: "c1", _creationTime: 1000, userId: "u1", phone: "+1111111111", firstName: "Alice", status: "pending" },
+        { _id: "c2", _creationTime: 900, userId: "u1", phone: "+2222222222", firstName: "Bob", status: "sent" },
       ],
       status: "Exhausted",
       loadMore: vi.fn(),
@@ -110,7 +110,7 @@ describe("ContactsPage", () => {
   it("renders contacts when data exists", () => {
     mockUsePaginatedQuery.mockReturnValue({
       results: [
-        { _id: "c1", _creationTime: 1000, userId: "u1", phone: "+1234567890", name: "Alice", status: "pending" },
+        { _id: "c1", _creationTime: 1000, userId: "u1", phone: "+1234567890", firstName: "Alice", status: "pending" },
       ],
       status: "Exhausted",
       loadMore: vi.fn(),
@@ -125,7 +125,7 @@ describe("ContactsPage", () => {
   it("shows Load more when more contacts available", () => {
     mockUsePaginatedQuery.mockReturnValue({
       results: [
-        { _id: "c1", _creationTime: 1000, userId: "u1", phone: "+1234567890", name: "Alice", status: "pending" },
+        { _id: "c1", _creationTime: 1000, userId: "u1", phone: "+1234567890", firstName: "Alice", status: "pending" },
       ],
       status: "CanLoadMore",
       loadMore: vi.fn(),

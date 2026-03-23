@@ -7,9 +7,14 @@ interface Contact {
   _creationTime: number;
   userId: string;
   phone: string;
-  name?: string;
+  firstName?: string;
+  lastName?: string;
   status: string;
   sentAt?: number;
+}
+
+function contactDisplayName(c: Contact): string {
+  return [c.firstName, c.lastName].filter(Boolean).join(" ");
 }
 
 interface ContactTableProps {
@@ -86,7 +91,7 @@ export function ContactTable({
     return [...contacts].sort((a, b) => {
       let cmp: number;
       if (sortField === "name") {
-        cmp = (a.name ?? "").localeCompare(b.name ?? "");
+        cmp = contactDisplayName(a).localeCompare(contactDisplayName(b));
       } else {
         cmp = (statusPriority[a.status] ?? 99) - (statusPriority[b.status] ?? 99);
       }
@@ -164,11 +169,11 @@ export function ContactTable({
                     checked={selected.has(contact._id)}
                     onChange={() => toggleSelect(contact._id)}
                     className="rounded border-zinc-600 bg-zinc-800 accent-emerald-500 mt-0.5"
-                    aria-label={`Select ${contact.name || contact.phone}`}
+                    aria-label={`Select ${contactDisplayName(contact) || contact.phone}`}
                   />
                   <div>
                     <p className="text-sm font-medium text-zinc-200">
-                      {contact.name || (
+                      {contactDisplayName(contact) || (
                         <span className="text-zinc-600">&mdash;</span>
                       )}
                     </p>
@@ -273,11 +278,11 @@ export function ContactTable({
                       checked={selected.has(contact._id)}
                       onChange={() => toggleSelect(contact._id)}
                       className="rounded border-zinc-600 bg-zinc-800 accent-emerald-500"
-                      aria-label={`Select ${contact.name || contact.phone}`}
+                      aria-label={`Select ${contactDisplayName(contact) || contact.phone}`}
                     />
                   </td>
                   <td className="px-4 py-3 text-sm text-zinc-200">
-                    {contact.name || (
+                    {contactDisplayName(contact) || (
                       <span className="text-zinc-600">&mdash;</span>
                     )}
                   </td>

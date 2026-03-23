@@ -67,12 +67,12 @@ describe("MediaUpload", () => {
     });
   });
 
-  it("shows error for oversized files (>16MB)", () => {
+  it("shows error for oversized files", () => {
     render(<MediaUpload onUpload={mockOnUpload} />);
 
     const input = screen.getByLabelText(/attach media/i) as HTMLInputElement;
-    const file = new File(["x"], "big.mp4", { type: "video/mp4" });
-    Object.defineProperty(file, "size", { value: 17 * 1024 * 1024 });
+    const file = new File(["x"], "big.jpg", { type: "image/jpeg" });
+    Object.defineProperty(file, "size", { value: 11 * 1024 * 1024 });
     fireEvent.change(input, { target: { files: [file] } });
 
     expect(screen.getByText(/file too large/i)).toBeInTheDocument();

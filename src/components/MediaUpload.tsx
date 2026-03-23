@@ -1,11 +1,30 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Loader2, FileVideo, File, X, Upload } from "lucide-react";
+import { Loader2, FileVideo, File, X, Upload, Music } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Id } from "@convex/_generated/dataModel";
 
-const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
+type MediaType = "image" | "video" | "document" | "audio";
+
+function getMediaType(mimeType: string): MediaType {
+  if (mimeType.startsWith("image/")) return "image";
+  if (mimeType.startsWith("video/")) return "video";
+  if (mimeType.startsWith("audio/")) return "audio";
+  return "document";
+}
+
+const MAX_FILE_SIZES: Record<MediaType, number> = {
+  image: 10 * 1024 * 1024, // 10MB
+  video: 50 * 1024 * 1024, // 50MB
+  document: 20 * 1024 * 1024, // 20MB
+  audio: 20 * 1024 * 1024, // 20MB
+};
+
+function formatSize(bytes: number): string {
+  return `${Math.round(bytes / (1024 * 1024))}MB`;
+}
+
 const ACCEPTED_TYPES = [
   "image/jpeg",
   "image/png",
@@ -18,19 +37,12 @@ const ACCEPTED_TYPES = [
   "audio/ogg",
 ];
 
-type MediaType = "image" | "video" | "document" | "audio";
-
-function getMediaType(mimeType: string): MediaType {
-  if (mimeType.startsWith("image/")) return "image";
-  if (mimeType.startsWith("video/")) return "video";
-  if (mimeType.startsWith("audio/")) return "audio";
-  return "document";
-}
-
 function MediaIcon({ mediaType }: { mediaType: MediaType }) {
   switch (mediaType) {
     case "video":
       return <FileVideo className="w-5 h-5 text-violet-400" />;
+    case "audio":
+      return <Music className="w-5 h-5 text-amber-400" />;
     default:
       return <File className="w-5 h-5 text-zinc-400" />;
   }
@@ -67,14 +79,18 @@ export function MediaUpload({ onUpload }: MediaUploadProps) {
       setError("");
       setUploaded(false);
 
-      if (file.size > MAX_FILE_SIZE) {
-        setError("File too large. Maximum size is 16MB.");
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        setError("Unsupported file type.");
         setSelectedFile(null);
         return;
       }
 
-      if (!ACCEPTED_TYPES.includes(file.type)) {
-        setError("Unsupported file type.");
+      const mediaType = getMediaType(file.type);
+      const maxSize = MAX_FILE_SIZES[mediaType];
+      if (file.size > maxSize) {
+        setError(
+          `File too large. Max size for ${mediaType}s is ${formatSize(maxSize)}.`,
+        );
         setSelectedFile(null);
         return;
       }
@@ -83,9 +99,45 @@ export function MediaUpload({ onUpload }: MediaUploadProps) {
       if (thumbnailUrl) URL.revokeObjectURL(thumbnailUrl);
 
       // Create thumbnail for images
-      const mediaType = getMediaType(file.type);
       if (mediaType === "image") {
         setThumbnailUrl(URL.createObjectURL(file));
+      } else if (mediaType === "video") {
+        // Generate video thumbnail from first frame
+        const videoEl = document.createElement("video");
+        videoEl.preload = "metadata";
+        videoEl.muted = true;
+        const videoUrl = URL.createObjectURL(file);
+        videoEl.src = videoUrl;
+        videoEl.currentTime = 1; // seek to 1 second
+        videoEl.addEventListener(
+          "seeked",
+          () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = 80;
+            canvas.height = 80;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              const scale = Math.max(
+                80 / videoEl.videoWidth,
+                80 / videoEl.videoHeight,
+              );
+              const w = videoEl.videoWidth * scale;
+              const h = videoEl.videoHeight * scale;
+              ctx.drawImage(videoEl, (80 - w) / 2, (80 - h) / 2, w, h);
+              setThumbnailUrl(canvas.toDataURL("image/jpeg", 0.7));
+            }
+            URL.revokeObjectURL(videoUrl);
+          },
+          { once: true },
+        );
+        videoEl.addEventListener(
+          "error",
+          () => {
+            URL.revokeObjectURL(videoUrl);
+            setThumbnailUrl(null);
+          },
+          { once: true },
+        );
       } else {
         setThumbnailUrl(null);
       }
@@ -200,7 +252,8 @@ export function MediaUpload({ onUpload }: MediaUploadProps) {
           Drag & drop files here or click to browse
         </p>
         <p className="text-xs text-zinc-500">
-          Images, videos, audio, documents up to 16MB
+          Images up to 10MB &middot; Videos up to 50MB &middot; Docs &amp; audio
+          up to 20MB
         </p>
       </motion.div>
 

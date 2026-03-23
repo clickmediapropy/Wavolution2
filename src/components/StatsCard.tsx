@@ -6,6 +6,8 @@ interface StatsCardProps {
   iconBg: string; // e.g. "bg-emerald-500/10"
   label: string;
   value: string | number;
+  subtitle?: string;
+  subtitleColor?: string;
 }
 
 function AnimatedNumber({ value }: { value: number }) {
@@ -14,7 +16,7 @@ function AnimatedNumber({ value }: { value: number }) {
   return <span ref={ref} />;
 }
 
-export function StatsCard({ icon, iconBg, label, value }: StatsCardProps) {
+export function StatsCard({ icon, iconBg, label, value, subtitle, subtitleColor }: StatsCardProps) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 transition-transform hover:-translate-y-0.5 hover:border-zinc-700">
       <div className="flex items-center gap-3 mb-3">
@@ -28,6 +30,9 @@ export function StatsCard({ icon, iconBg, label, value }: StatsCardProps) {
       <span className="text-3xl font-bold text-zinc-100">
         {typeof value === "number" ? <AnimatedNumber value={value} /> : value}
       </span>
+      {subtitle && (
+        <p className={`text-xs mt-0.5 ${subtitleColor || "text-zinc-500"}`}>{subtitle}</p>
+      )}
     </div>
   );
 }

@@ -29,6 +29,20 @@ export const count = query({
   },
 });
 
+// Count contacts added in the last 7 days
+export const countThisWeek = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthedUserId(ctx);
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const contacts = await ctx.db
+      .query("contacts")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+    return contacts.filter((c) => c._creationTime > weekAgo).length;
+  },
+});
+
 // Paginated contact list (newest first)
 export const list = query({
   args: { paginationOpts: paginationOptsValidator },
@@ -42,15 +56,15 @@ export const list = query({
   },
 });
 
-// Search contacts by name using full-text search index
+// Search contacts by first name using full-text search index
 export const search = query({
   args: { term: v.string() },
   handler: async (ctx, args) => {
     const userId = await getAuthedUserId(ctx);
     return await ctx.db
       .query("contacts")
-      .withSearchIndex("search_by_name", (q) =>
-        q.search("name", args.term).eq("userId", userId),
+      .withSearchIndex("search_by_firstName", (q) =>
+        q.search("firstName", args.term).eq("userId", userId),
       )
       .take(50);
   },
@@ -60,7 +74,8 @@ export const search = query({
 export const add = mutation({
   args: {
     phone: v.string(),
-    name: v.optional(v.string()),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthedUserId(ctx);
@@ -82,7 +97,8 @@ export const add = mutation({
     return await ctx.db.insert("contacts", {
       userId: userId,
       phone,
-      name: args.name?.trim() || undefined,
+      firstName: args.firstName?.trim() || undefined,
+      lastName: args.lastName?.trim() || undefined,
       status: "pending",
     });
   },
@@ -93,7 +109,8 @@ export const update = mutation({
   args: {
     id: v.id("contacts"),
     phone: v.string(),
-    name: v.optional(v.string()),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthedUserId(ctx);
@@ -122,7 +139,8 @@ export const update = mutation({
 
     await ctx.db.patch(args.id, {
       phone,
-      name: args.name?.trim() || undefined,
+      firstName: args.firstName?.trim() || undefined,
+      lastName: args.lastName?.trim() || undefined,
     });
   },
 });
@@ -157,13 +175,26 @@ export const removeMultiple = mutation({
   },
 });
 
+// Export all contacts for current user (capped at 10k)
+export const exportAll = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthedUserId(ctx);
+    return await ctx.db
+      .query("contacts")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .take(10000);
+  },
+});
+
 // Import a batch of contacts from CSV (max 100 per call)
 export const importBatch = mutation({
   args: {
     contacts: v.array(
       v.object({
         phone: v.string(),
-        name: v.optional(v.string()),
+        firstName: v.optional(v.string()),
+        lastName: v.optional(v.string()),
       }),
     ),
   },
@@ -199,7 +230,8 @@ export const importBatch = mutation({
       await ctx.db.insert("contacts", {
         userId: userId,
         phone,
-        name: contact.name?.trim() || undefined,
+        firstName: contact.firstName?.trim() || undefined,
+        lastName: contact.lastName?.trim() || undefined,
         status: "pending",
       });
       added++;

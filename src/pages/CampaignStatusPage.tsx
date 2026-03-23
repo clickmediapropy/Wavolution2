@@ -11,6 +11,8 @@ import {
   Clock,
   Send,
   AlertTriangle,
+  Pause,
+  Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Id } from "@convex/_generated/dataModel";
@@ -19,6 +21,7 @@ function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     draft: "bg-zinc-700 text-zinc-300",
     running: "bg-emerald-500/10 text-emerald-400",
+    paused: "bg-amber-500/10 text-amber-400",
     completed: "bg-blue-500/10 text-blue-400",
     stopped: "bg-red-500/10 text-red-400",
   };
@@ -27,15 +30,35 @@ function StatusBadge({ status }: { status: string }) {
     <span
       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${styles[status] ?? styles.draft}`}
     >
-      {status === "running" && (
+      {(status === "running" || status === "paused") && (
         <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+          <span
+            className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+              status === "paused" ? "bg-amber-400" : "bg-emerald-400"
+            }`}
+          />
+          <span
+            className={`relative inline-flex rounded-full h-2 w-2 ${
+              status === "paused" ? "bg-amber-500" : "bg-emerald-500"
+            }`}
+          />
         </span>
       )}
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
+}
+
+function formatEta(ms: number): string {
+  if (ms <= 0) return "";
+  const totalSec = Math.ceil(ms / 1000);
+  if (totalSec < 60) return `~${totalSec}s remaining`;
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  if (min < 60) return `~${min}m ${sec}s remaining`;
+  const hr = Math.floor(min / 60);
+  const remainMin = min % 60;
+  return `~${hr}h ${remainMin}m remaining`;
 }
 
 export function CampaignStatusPage() {
@@ -46,6 +69,8 @@ export function CampaignStatusPage() {
     id ? { id: id as Id<"campaigns"> } : "skip",
   );
   const stopCampaign = useMutation(api.campaigns.stop);
+  const pauseCampaign = useMutation(api.campaigns.pause);
+  const resumeCampaign = useMutation(api.campaigns.resume);
 
   const handleStop = async () => {
     if (!id) return;
@@ -55,6 +80,30 @@ export function CampaignStatusPage() {
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to stop campaign",
+      );
+    }
+  };
+
+  const handlePause = async () => {
+    if (!id) return;
+    try {
+      await pauseCampaign({ id: id as Id<"campaigns"> });
+      toast.success("Campaign paused");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to pause campaign",
+      );
+    }
+  };
+
+  const handleResume = async () => {
+    if (!id) return;
+    try {
+      await resumeCampaign({ id: id as Id<"campaigns"> });
+      toast.success("Campaign resumed");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to resume campaign",
       );
     }
   };
@@ -94,6 +143,11 @@ export function CampaignStatusPage() {
       ? Math.round(((campaign.sent + campaign.failed) / campaign.total) * 100)
       : 0;
 
+  const etaMs = (campaign.total - campaign.processed) * campaign.delay;
+  const showEta =
+    (campaign.status === "running" || campaign.status === "paused") &&
+    etaMs > 0;
+
   const startedDate = campaign.startedAt
     ? new Date(campaign.startedAt).toLocaleString()
     : "—";
@@ -107,7 +161,7 @@ export function CampaignStatusPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/campaigns")}
             className="p-2 text-zinc-400 hover:text-zinc-200 transition-colors"
             aria-label="Back"
           >
@@ -122,15 +176,44 @@ export function CampaignStatusPage() {
           </div>
         </div>
 
-        {campaign.status === "running" && (
-          <button
-            onClick={handleStop}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
-          >
-            <Square className="w-4 h-4" />
-            Stop Campaign
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {campaign.status === "running" && (
+            <>
+              <button
+                onClick={handlePause}
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg hover:bg-amber-500/20 transition-colors"
+              >
+                <Pause className="w-4 h-4" />
+                Pause
+              </button>
+              <button
+                onClick={handleStop}
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
+              >
+                <Square className="w-4 h-4" />
+                Stop
+              </button>
+            </>
+          )}
+          {campaign.status === "paused" && (
+            <>
+              <button
+                onClick={handleResume}
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-colors"
+              >
+                <Play className="w-4 h-4" />
+                Resume
+              </button>
+              <button
+                onClick={handleStop}
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
+              >
+                <Square className="w-4 h-4" />
+                Stop
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Progress bar */}
@@ -148,7 +231,9 @@ export function CampaignStatusPage() {
                 ? "bg-red-500"
                 : campaign.status === "completed"
                   ? "bg-blue-500"
-                  : "bg-emerald-500"
+                  : campaign.status === "paused"
+                    ? "bg-amber-500"
+                    : "bg-emerald-500"
             }`}
             style={{ width: `${progressPct}%` }}
             role="progressbar"
@@ -158,6 +243,9 @@ export function CampaignStatusPage() {
             aria-label="Campaign progress"
           />
         </div>
+        {showEta && (
+          <p className="text-xs text-zinc-400 mt-2">{formatEta(etaMs)}</p>
+        )}
       </div>
 
       {/* Stats grid */}

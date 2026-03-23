@@ -17,7 +17,8 @@ export function RecentMessages() {
   const phoneToName = new Map<string, string>();
   if (contacts?.page) {
     for (const c of contacts.page) {
-      if (c.name) phoneToName.set(c.phone, c.name);
+      const fullName = [c.firstName, c.lastName].filter(Boolean).join(" ");
+      if (fullName) phoneToName.set(c.phone, fullName);
     }
   }
 

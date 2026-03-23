@@ -134,6 +134,11 @@ export const sendText = action({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const recentCount: number = await ctx.runQuery(api.messages.countRecent, { minutes: 60 });
+    if (recentCount >= 100) {
+      throw new Error("Rate limit exceeded. Max 100 messages per hour. Please wait and try again.");
+    }
+
     const baseUrl = getBaseUrl();
     const apiKey = getGlobalApiKey();
 
@@ -179,6 +184,11 @@ export const sendMedia = action({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+
+    const recentCount: number = await ctx.runQuery(api.messages.countRecent, { minutes: 60 });
+    if (recentCount >= 100) {
+      throw new Error("Rate limit exceeded. Max 100 messages per hour. Please wait and try again.");
+    }
 
     // Resolve storage URL server-side
     const mediaUrl: string | null = await ctx.runQuery(

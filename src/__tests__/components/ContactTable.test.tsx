@@ -3,8 +3,8 @@ import { describe, it, expect, vi } from "vitest";
 import { ContactTable } from "@/components/ContactTable";
 
 const mockContacts = [
-  { _id: "c1" as any, _creationTime: 1000, userId: "u1" as any, phone: "+1234567890", name: "Alice", status: "pending" },
-  { _id: "c2" as any, _creationTime: 900, userId: "u1" as any, phone: "+0987654321", name: "Bob", status: "sent", sentAt: 1234567890 },
+  { _id: "c1" as any, _creationTime: 1000, userId: "u1" as any, phone: "+1234567890", firstName: "Alice", status: "pending" },
+  { _id: "c2" as any, _creationTime: 900, userId: "u1" as any, phone: "+0987654321", firstName: "Bob", status: "sent", sentAt: 1234567890 },
   { _id: "c3" as any, _creationTime: 800, userId: "u1" as any, phone: "+1111111111", status: "failed" },
 ];
 

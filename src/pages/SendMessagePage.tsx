@@ -120,15 +120,18 @@ export function SendMessagePage() {
       : inst.name,
   }));
 
-  const contactOptions = contacts.results.map((contact) => ({
-    value: contact.phone,
-    label: contact.name
-      ? `${contact.name} (${contact.phone})`
-      : contact.phone,
-  }));
+  const contactOptions = contacts.results.map((contact) => {
+    const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(" ");
+    return {
+      value: contact.phone,
+      label: fullName ? `${fullName} (${contact.phone})` : contact.phone,
+    };
+  });
 
-  const selectedContactName =
-    contacts.results.find((c) => c.phone === selectedPhone)?.name ?? undefined;
+  const selectedContact = contacts.results.find((c) => c.phone === selectedPhone);
+  const selectedContactName = selectedContact
+    ? [selectedContact.firstName, selectedContact.lastName].filter(Boolean).join(" ") || undefined
+    : undefined;
 
   return (
     <div className="animate-fadeIn">

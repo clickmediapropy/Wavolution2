@@ -48,14 +48,15 @@ const schema = defineSchema({
   contacts: defineTable({
     userId: v.id("users"),
     phone: v.string(),
-    name: v.optional(v.string()),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
     status: v.string(),
     sentAt: v.optional(v.number()),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_and_phone", ["userId", "phone"])
-    .searchIndex("search_by_name", {
-      searchField: "name",
+    .searchIndex("search_by_firstName", {
+      searchField: "firstName",
       filterFields: ["userId"],
     }),
 

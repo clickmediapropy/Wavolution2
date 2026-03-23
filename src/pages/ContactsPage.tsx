@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { usePaginatedQuery, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Users, Plus, Upload, Search } from "lucide-react";
+import { Users, Plus, Upload, Search, Download } from "lucide-react";
 import { toast } from "sonner";
 import { ContactTable } from "@/components/ContactTable";
 import { ContactFormDialog } from "@/components/ContactFormDialog";
@@ -31,6 +31,7 @@ export function ContactsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   // Queries
+  const allContacts = useQuery(api.contacts.exportAll);
   const totalCount = useQuery(api.contacts.count);
   const paginatedContacts = usePaginatedQuery(
     api.contacts.list,
@@ -73,7 +74,7 @@ export function ContactsPage() {
 
   // Handlers
   const handleFormSubmit = useCallback(
-    async (data: { id?: string; phone: string; name: string }) => {
+    async (data: { id?: string; phone: string; firstName: string; lastName: string }) => {
       setDialogError("");
       setDialogSubmitting(true);
       try {
@@ -81,13 +82,15 @@ export function ContactsPage() {
           await updateContact({
             id: data.id as any,
             phone: data.phone,
-            name: data.name || undefined,
+            firstName: data.firstName || undefined,
+            lastName: data.lastName || undefined,
           });
           toast.success("Contact updated");
         } else {
           await addContact({
             phone: data.phone,
-            name: data.name || undefined,
+            firstName: data.firstName || undefined,
+            lastName: data.lastName || undefined,
           });
           toast.success("Contact added");
         }
@@ -139,6 +142,28 @@ export function ContactsPage() {
     }
   }, [deletingIds, removeContact, removeMultiple]);
 
+  const handleExport = useCallback(() => {
+    if (!allContacts || allContacts.length === 0) {
+      toast.error("No contacts to export");
+      return;
+    }
+    const header = "name,last_name,phone,status";
+    const rows = allContacts.map((c) => {
+      const first = c.firstName || "";
+      const last = c.lastName || "";
+      return `"${first.replace(/"/g, '""')}","${last.replace(/"/g, '""')}","${c.phone}","${c.status}"`;
+    });
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `contacts-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${allContacts.length} contacts`);
+  }, [allContacts]);
+
   const openEdit = useCallback((contact: any) => {
     setEditingContact(contact);
     setDialogError("");
@@ -157,6 +182,15 @@ export function ContactsPage() {
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleExport}
+            disabled={!allContacts || allContacts.length === 0}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Export CSV"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
           <Link
             to="/contacts/upload"
             className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg hover:bg-zinc-700 transition-colors"

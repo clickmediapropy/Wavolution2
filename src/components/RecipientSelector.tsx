@@ -53,7 +53,8 @@ export function RecipientSelector({
     return contacts.filter(
       (c) =>
         c.phone.toLowerCase().includes(q) ||
-        (c.name && c.name.toLowerCase().includes(q)),
+        (c.firstName && c.firstName.toLowerCase().includes(q)) ||
+        (c.lastName && c.lastName.toLowerCase().includes(q)),
     );
   }, [contacts, searchQuery]);
 
@@ -177,8 +178,8 @@ export function RecipientSelector({
                     className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-emerald-500 focus:ring-emerald-500/50"
                   />
                   <span className="text-sm text-zinc-200 truncate">
-                    {contact.name
-                      ? `${contact.name} (${contact.phone})`
+                    {(contact.firstName || contact.lastName)
+                      ? `${[contact.firstName, contact.lastName].filter(Boolean).join(" ")} (${contact.phone})`
                       : contact.phone}
                   </span>
                   <span

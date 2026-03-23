@@ -8,6 +8,7 @@ import {
   LogOut,
   LayoutDashboard,
   Users,
+  Megaphone,
   Send,
   Smartphone,
   Menu,
@@ -18,6 +19,7 @@ import { Toaster } from "sonner";
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/contacts", label: "Contacts", icon: Users },
+  { to: "/campaigns", label: "Campaigns", icon: Megaphone },
   { to: "/send", label: "Send", icon: Send },
   { to: "/whatsapp", label: "WhatsApp", icon: Smartphone },
 ] as const;

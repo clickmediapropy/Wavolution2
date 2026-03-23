@@ -1,6 +1,7 @@
 export interface CsvContact {
   phone: string;
-  name?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 /**
@@ -28,6 +29,7 @@ export function parseCSV(text: string): CsvContact[] {
     throw new Error('CSV must have a "phone" column in the header row');
   }
   const nameIdx = headers.indexOf("name");
+  const lastNameIdx = headers.indexOf("last_name");
 
   // Parse rows
   const contacts: CsvContact[] = [];
@@ -39,9 +41,13 @@ export function parseCSV(text: string): CsvContact[] {
     const phone = cells[phoneIdx] || "";
     if (!phone) continue;
 
+    const firstName = nameIdx >= 0 ? (cells[nameIdx] || "") : "";
+    const lastName = lastNameIdx >= 0 ? (cells[lastNameIdx] || "") : "";
+
     contacts.push({
       phone,
-      name: nameIdx >= 0 && cells[nameIdx] ? cells[nameIdx] : undefined,
+      firstName: firstName || undefined,
+      lastName: lastName || undefined,
     });
   }
 

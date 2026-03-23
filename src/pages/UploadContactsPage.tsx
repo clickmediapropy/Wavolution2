@@ -11,6 +11,7 @@ import {
   Loader2,
   UploadCloud,
   X,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { parseCSV, chunk } from "@/lib/csv";
@@ -140,15 +141,27 @@ export function UploadContactsPage() {
           <code className="px-1.5 py-0.5 bg-zinc-800 text-emerald-400 rounded text-xs font-mono">
             phone
           </code>{" "}
-          column. A{" "}
+          column.{" "}
           <code className="px-1.5 py-0.5 bg-zinc-800 text-emerald-400 rounded text-xs font-mono">
             name
           </code>{" "}
-          column is optional.
+          and{" "}
+          <code className="px-1.5 py-0.5 bg-zinc-800 text-emerald-400 rounded text-xs font-mono">
+            last_name
+          </code>{" "}
+          columns are optional.
         </p>
         <pre className="bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-xs font-mono text-emerald-300">
-          {`name,phone\nJohn Doe,+1234567890\nJane Smith,+0987654321`}
+          {`name,last_name,phone\nJohn,Doe,+1234567890\nJane,Smith,+0987654321`}
         </pre>
+        <a
+          href="/sample-contacts.csv"
+          download="sample-contacts.csv"
+          className="inline-flex items-center gap-2 mt-3 text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          Download sample template
+        </a>
       </div>
 
       {/* Upload area */}

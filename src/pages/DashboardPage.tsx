@@ -8,11 +8,14 @@ import { QuickActions } from "@/components/QuickActions";
 
 export function DashboardPage() {
   const contactCount = useQuery(api.contacts.count);
+  const contactsThisWeek = useQuery(api.contacts.countThisWeek);
   const messageCount = useQuery(api.messages.count);
+  const messagesToday = useQuery(api.messages.countToday);
   const campaigns = useQuery(api.campaigns.listByUser);
   const instanceCounts = useQuery(api.instances.count);
 
   const campaignCount = campaigns?.length ?? 0;
+  const activeCampaigns = campaigns?.filter(c => c.status === "running" || c.status === "paused").length ?? 0;
   const connected = (instanceCounts?.connected ?? 0) > 0;
 
   return (
@@ -31,6 +34,8 @@ export function DashboardPage() {
           iconBg="bg-blue-500/10"
           label="Total Contacts"
           value={contactCount ?? "..."}
+          subtitle={contactsThisWeek !== undefined ? `+${contactsThisWeek} this week` : undefined}
+          subtitleColor="text-blue-400/70"
         />
 
         <StatsCard
@@ -38,13 +43,17 @@ export function DashboardPage() {
           iconBg="bg-violet-500/10"
           label="Messages Sent"
           value={messageCount ?? "..."}
+          subtitle={messagesToday !== undefined ? `+${messagesToday} today` : undefined}
+          subtitleColor="text-violet-400/70"
         />
 
         <StatsCard
           icon={<Megaphone className="w-5 h-5 text-amber-400" />}
           iconBg="bg-amber-500/10"
-          label="Campaigns"
-          value={campaignCount}
+          label="Active Campaigns"
+          value={activeCampaigns}
+          subtitle={campaignCount > 0 ? `${campaignCount} total` : undefined}
+          subtitleColor="text-amber-400/70"
         />
       </div>
 

@@ -15,6 +15,7 @@ import { WhatsAppPage } from "./pages/WhatsAppPage";
 import { SendMessagePage } from "./pages/SendMessagePage";
 import { BulkCampaignPage } from "./pages/BulkCampaignPage";
 import { CampaignStatusPage } from "./pages/CampaignStatusPage";
+import { CampaignHistoryPage } from "./pages/CampaignHistoryPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { WhatsAppGuard } from "./components/WhatsAppGuard";
 
@@ -92,6 +93,14 @@ export default function App() {
                     <WhatsAppGuard>
                       <SendMessagePage />
                     </WhatsAppGuard>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/campaigns"
+                element={
+                  <ProtectedRoute>
+                    <CampaignHistoryPage />
                   </ProtectedRoute>
                 }
               />

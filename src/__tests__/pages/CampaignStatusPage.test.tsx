@@ -68,7 +68,7 @@ describe("CampaignStatusPage", () => {
     expect(screen.getByText("100")).toBeInTheDocument(); // total
   });
 
-  it("shows stop button for running campaigns", () => {
+  it("shows pause and stop buttons for running campaigns", () => {
     mockUseQuery.mockReturnValue({
       _id: "campaign123",
       name: "Test Campaign",
@@ -85,9 +85,8 @@ describe("CampaignStatusPage", () => {
     });
     renderWithRoute("campaign123");
 
-    expect(
-      screen.getByRole("button", { name: /stop campaign/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /pause/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /stop/i })).toBeInTheDocument();
   });
 
   it("does not show stop button for completed campaigns", () => {
@@ -111,6 +110,47 @@ describe("CampaignStatusPage", () => {
     expect(
       screen.queryByRole("button", { name: /stop campaign/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows resume and stop buttons for paused campaigns", () => {
+    mockUseQuery.mockReturnValue({
+      _id: "campaign123",
+      name: "Paused Campaign",
+      status: "paused",
+      recipientType: "all",
+      total: 50,
+      processed: 10,
+      sent: 8,
+      failed: 2,
+      delay: 3000,
+      messageTemplate: "Hi!",
+      hasMedia: false,
+      startedAt: Date.now(),
+    });
+    renderWithRoute("campaign123");
+
+    expect(screen.getByRole("button", { name: /resume/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /stop/i })).toBeInTheDocument();
+  });
+
+  it("shows estimated completion time for running campaigns", () => {
+    mockUseQuery.mockReturnValue({
+      _id: "campaign123",
+      name: "ETA Test",
+      status: "running",
+      recipientType: "all",
+      total: 100,
+      processed: 50,
+      sent: 45,
+      failed: 5,
+      delay: 5000,
+      messageTemplate: "Hi!",
+      hasMedia: false,
+      startedAt: Date.now(),
+    });
+    renderWithRoute("campaign123");
+
+    expect(screen.getAllByText(/remaining/i).length).toBeGreaterThan(0);
   });
 
   it("shows progress bar with correct percentage", () => {

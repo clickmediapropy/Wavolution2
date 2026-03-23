@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { User, Phone } from "lucide-react";
+import { User, UserRound, Phone } from "lucide-react";
 
 interface MessageTemplateEditorProps {
   value: string;
@@ -8,6 +8,7 @@ interface MessageTemplateEditorProps {
 
 const TOKENS = [
   { key: "{name}", label: "Name", icon: <User className="w-3.5 h-3.5" /> },
+  { key: "{first_name}", label: "First Name", icon: <UserRound className="w-3.5 h-3.5" /> },
   { key: "{phone}", label: "Phone", icon: <Phone className="w-3.5 h-3.5" /> },
 ];
 
@@ -72,8 +73,8 @@ export function MessageTemplateEditor({
       />
 
       <p className="text-xs text-zinc-500">
-        Use {"{name}"} and {"{phone}"} as placeholders. They&apos;ll be replaced
-        with each contact&apos;s info.
+        Use {"{name}"}, {"{first_name}"}, and {"{phone}"} as placeholders.
+        They&apos;ll be replaced with each contact&apos;s info.
       </p>
     </div>
   );

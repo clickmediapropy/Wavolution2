@@ -23,15 +23,18 @@ vi.mock("react-countup", () => ({
 describe("DashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // DashboardPage calls useQuery 4 times:
-    // 1. contacts.count, 2. messages.count, 3. campaigns.listByUser, 4. instances.count
+    // DashboardPage calls useQuery 6 times:
+    // 1. contacts.count, 2. contacts.countThisWeek, 3. messages.count,
+    // 4. messages.countToday, 5. campaigns.listByUser, 6. instances.count
     let callIndex = 0;
     mockUseQuery.mockImplementation(() => {
       const i = callIndex++;
-      if (i === 0) return 42; // contactCount
-      if (i === 1) return 15; // messageCount
-      if (i === 2) return [{ _id: "camp1" }]; // campaigns
-      if (i === 3) return { total: 3, connected: 2 }; // instances.count
+      if (i === 0) return 42;                                         // contacts.count
+      if (i === 1) return 5;                                          // contacts.countThisWeek
+      if (i === 2) return 15;                                         // messages.count
+      if (i === 3) return 3;                                          // messages.countToday
+      if (i === 4) return [{ _id: "camp1", status: "running" }];     // campaigns.listByUser
+      if (i === 5) return { total: 3, connected: 2 };                // instances.count
       return null;
     });
     mockUsePaginatedQuery.mockReturnValue({
@@ -97,6 +100,6 @@ describe("DashboardPage", () => {
 
     expect(screen.getByText("Total Contacts")).toBeInTheDocument();
     expect(screen.getByText("Messages Sent")).toBeInTheDocument();
-    expect(screen.getByText("Campaigns")).toBeInTheDocument();
+    expect(screen.getByText("Active Campaigns")).toBeInTheDocument();
   });
 });
