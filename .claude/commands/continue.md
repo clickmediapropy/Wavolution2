@@ -1,0 +1,1 @@
+Read next.md in the project root and use it as your full context for this session. It contains: what the project is, what's been done, current state, what to do next, key gotchas, and dev commands. After reading, summarize the current state and what you'll work on next, then wait for confirmation before starting.
