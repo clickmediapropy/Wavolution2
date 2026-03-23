@@ -12,6 +12,8 @@ import { UploadContactsPage } from "./pages/UploadContactsPage";
 import { SetupWhatsAppPage } from "./pages/SetupWhatsAppPage";
 import { ConnectWhatsAppPage } from "./pages/ConnectWhatsAppPage";
 import { SendMessagePage } from "./pages/SendMessagePage";
+import { BulkCampaignPage } from "./pages/BulkCampaignPage";
+import { CampaignStatusPage } from "./pages/CampaignStatusPage";
 import { WhatsAppGuard } from "./components/WhatsAppGuard";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -85,6 +87,22 @@ export default function App() {
                   <WhatsAppGuard>
                     <SendMessagePage />
                   </WhatsAppGuard>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/campaigns/new"
+              element={
+                <ProtectedRoute>
+                  <BulkCampaignPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/campaigns/:id"
+              element={
+                <ProtectedRoute>
+                  <CampaignStatusPage />
                 </ProtectedRoute>
               }
             />

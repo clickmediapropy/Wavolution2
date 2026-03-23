@@ -60,17 +60,20 @@ const schema = defineSchema({
 
   campaigns: defineTable({
     userId: v.id("users"),
-    status: v.string(),
-    recipientType: v.string(),
+    name: v.string(),
+    status: v.string(), // draft | running | completed | stopped
+    recipientType: v.string(), // all | pending | manual
     selectedContactIds: v.optional(v.array(v.id("contacts"))),
     total: v.number(),
     processed: v.number(),
     sent: v.number(),
     failed: v.number(),
-    delay: v.number(),
+    delay: v.number(), // delay in ms between messages
     messageTemplate: v.string(),
     hasMedia: v.boolean(),
     mediaStorageIds: v.optional(v.array(v.id("_storage"))),
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 });
 
