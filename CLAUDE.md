@@ -4,101 +4,110 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Message Hub (wavolution2) — a Flask web app for managing WhatsApp bulk messaging campaigns via the Evolution API. Multi-user system with auth, contact management, CSV import, media attachments, and real-time campaign progress tracking.
+Message Hub (wavolution2) — a WhatsApp bulk messaging platform. Multi-user system with auth, contact management, CSV import, media attachments, and real-time campaign progress tracking.
+
+## Stack
+
+- **Frontend:** Vite 8 + React 19 + TypeScript + Tailwind CSS v4, hosted on Vercel
+- **Backend:** Convex Cloud (real-time reactive database + serverless functions)
+- **Auth:** Convex Auth with Password provider (email/password)
+- **VPS:** Evolution API v2.2.3 + Node.js campaign worker (planned)
+- **Testing:** Vitest + React Testing Library (TDD approach)
+
+## Domains
+
+- **App:** `bulk.agentifycrm.io` (Vercel)
+- **Evolution API:** `wavolution.agentifycrm.io` (Contabo VPS, port 8080)
+- **VPS IP:** `92.118.59.92` (SSH: `ssh contabo`)
+- **Convex:** `wandering-blackbird-22` deployment
 
 ## Commands
 
 ```bash
-# Setup
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env  # then edit with real values
+# Development
+npm run dev                      # vp dev (Vite+ dev server)
+npx convex dev                   # Convex dev server (watches for changes)
 
-# Run (development)
-python run.py                    # starts on 0.0.0.0:5001, debug mode
-./start_development.sh           # creates venv, installs deps, runs
+# Build & Check
+npm run build                    # vp build (production build)
+npm run check                    # vp check (format + lint + type check)
 
-# Run (production)
-./start_production.sh            # gunicorn on :5000 with 4 workers
+# Tests (TDD)
+npm test                         # vitest run (all tests)
+npm run test:watch               # vitest watch mode
 
-# Database
-python migrate.py                # backup + migration status check
-python -c "from migrations.migrate_database import migrate_database; migrate_database('whatsapp.db')"  # run actual migration
-
-# Tests
-python -m pytest                         # all tests
-python -m pytest tests/test_services.py  # single file
-python -m pytest --cov=app               # with coverage
+# Convex
+npx convex dev --once            # push schema/functions once
+npx convex dashboard             # open Convex dashboard
 ```
 
 ## Architecture
 
-### Application Factory Pattern
-`app/__init__.py` → `create_app()` builds the Flask app: loads config, registers 5 blueprints, sets up logging, error handlers, context processors, and security headers.
-
-### Layered Structure
+### Communication Pattern
 ```
-Routes (blueprints) → Services (business logic) → Models (raw SQL via DatabaseManager)
+React (Vercel) → WebSocket → Convex Cloud → HTTP → VPS (Evolution API)
+```
+- React never calls the VPS directly. All communication flows through Convex.
+- Convex actions make HTTP calls to the VPS worker API.
+- React subscribes to Convex queries for real-time updates (no polling).
+
+### Frontend Structure
+```
+src/
+├── App.tsx                    # ConvexAuthProvider + BrowserRouter + Routes
+├── main.tsx                   # Entry point
+├── components/
+│   ├── AppLayout.tsx          # Navbar (auth-aware logout), footer, Sonner toasts
+│   ├── ProtectedRoute.tsx     # Auth guard → redirects to / if not authenticated
+│   └── AnonymousRoute.tsx     # Inverse guard → redirects to /dashboard if authenticated
+├── pages/
+│   ├── LoginPage.tsx          # Email/password login
+│   ├── RegisterPage.tsx       # Name/email/password registration
+│   └── DashboardPage.tsx      # Protected dashboard shell
+├── lib/
+│   └── utils.ts               # cn() utility (clsx + tailwind-merge)
+└── __tests__/                 # Mirrors src/ structure
 ```
 
-- **Routes** handle HTTP, call services, render Jinja2 templates
-- **Services** contain all business logic; instantiated per-request via `get_services()` helper in each route file
-- **Models** are thin wrappers around direct SQLite queries (no ORM)
-
-### Blueprint URL Mapping
-| Blueprint | Prefix | File |
-|-----------|--------|------|
-| `auth_bp` | `/auth` | `app/routes/auth.py` |
-| `main_bp` | `/` | `app/routes/main.py` |
-| `contacts_bp` | `/contacts` | `app/routes/contacts.py` |
-| `campaigns_bp` | `/campaigns` | `app/routes/campaigns.py` |
-| `api_bp` | `/api` | `app/routes/api.py` |
-
-### Service Layer
-| Service | Responsibility |
-|---------|---------------|
-| `AuthService` | Registration (creates Evolution API instance per user), login, sessions, password reset, PBKDF2 hashing |
-| `WhatsAppService` | Wraps Evolution API HTTP calls: QR code, connection status, send text/media/multi-media |
-| `ContactService` | CRUD, CSV import, pagination, stats, campaign contact selection |
-| `CampaignService` | Queue-based bulk sending with background `threading.Thread` worker, campaign progress tracking, personalization (`{name}`, `{phone}`) |
-| `EmailService` | SMTP-based password reset emails |
-
-### Database
-- **SQLite** via raw `sqlite3` — no ORM
-- `DatabaseManager` provides `get_connection()` context manager, `execute_query()`, `execute_update()`, `execute_insert()`
-- Tables: `app_users`, `contacts` (unique on `user_id, phone`), `messages`, `user_sessions`, `password_reset_tokens`
-- DB file defaults to `whatsapp.db` at project root (configurable via `DB_PATH` env var)
-- Migrations in `migrations/migrate_database.py` — safe migration with backup, creates missing tables, adds constraints
+### Convex Backend
+```
+convex/
+├── schema.ts                  # All tables: users (extended), contacts, messages, campaigns + authTables
+├── auth.config.ts             # OIDC issuer config (points to Convex site URL)
+├── auth.ts                    # Password provider with custom profile callback
+├── http.ts                    # HTTP routes for auth OIDC endpoints
+└── _generated/                # Auto-generated types (do not edit)
+```
 
 ### Auth Flow
-Session-based auth stored in Flask `session`. Decorators in `app/utils/auth.py`:
-- `@login_required` — redirects to login if no session
-- `@anonymous_required` — redirects to dashboard if already logged in
-- `@whatsapp_setup_required` — enforces WhatsApp instance creation + QR connection before access
-- `get_current_user()` — recreates `DatabaseManager`/`AuthService` from `current_app.config` each call
+- `signIn("password", { email, password, flow: "signIn" })` for login
+- `signIn("password", { email, password, name, flow: "signUp" })` for registration
+- `signOut()` for logout
+- `useConvexAuth()` returns `{ isAuthenticated, isLoading }`
+- All Convex functions use `ctx.auth.getUserIdentity()` — never accept userId as argument
 
-### Campaign Worker
-`CampaignService._background_worker()` runs as a daemon thread, pulls from `queue.Queue`, sends messages with configurable delay. Campaign state tracked in-memory via `self.campaign_status` dict (not persisted — lost on restart).
+### Convex Schema Tables
+- **users** — auth fields + app fields (evolutionInstanceName, whatsappConnected, etc.)
+- **contacts** — userId, phone, name, status, sentAt. Indexes: by_userId, by_userId_and_phone
+- **messages** — userId, campaignId, phone, message, status. Indexes: by_userId, by_campaignId
+- **campaigns** — userId, status, recipientType, total, processed, sent, failed, delay, messageTemplate, hasMedia, mediaStorageIds
 
-### Evolution API Integration
-Each user gets their own Evolution API instance (created at registration). The app talks to Evolution API for:
-- `POST /instance/create` — user registration
-- `GET /instance/connect/{name}` — QR code
-- `GET /instance/connectionState/{name}` — status check
-- `POST /message/sendText/{name}` — text messages
-- `POST /message/sendMedia/{name}` — media messages
-- `DELETE /instance/delete/{name}` — cleanup
+### Testing Pattern
+- TDD: write tests first, watch fail, implement, watch pass
+- Mock `useConvexAuth` via `vi.mock("convex/react")`
+- Mock `useAuthActions` via `vi.mock("@convex-dev/auth/react")`
+- Wrap components in `<MemoryRouter>` for routing tests
+- Use `fireEvent` from @testing-library/react (no userEvent installed)
 
-Auth uses either the user's per-instance API key or the global key as fallback.
+## Key Files
 
-### Config
-Three configs in `app/config.py`: `DevelopmentConfig`, `ProductionConfig`, `TestingConfig`. Selected by `FLASK_ENV` env var. Key env vars: `EVOLUTION_API_URL`, `EVOLUTION_GLOBAL_KEY`, `SECRET_KEY`, `DB_PATH`.
+- **Spec:** `docs/superpowers/specs/2026-03-23-tech-stack-migration-design.md`
+- **Phase plans:** `progress/phase-*/PLAN.md`
+- **Convex guidelines:** `convex/_generated/ai/guidelines.md` (read before writing Convex code)
 
-### Frontend
-Server-rendered Jinja2 templates in `templates/`. Uses Bootstrap via CDN. No build step or JS bundler. Templates extend `base_simple.html`.
+## Legacy Flask App
 
-### `references/` Directory
-Contains a full clone of `evolution-api` source for reference — do not modify.
+The original Flask/SQLite/Jinja2 app is still in the repo (`app/`, `templates/`, `run.py`, etc.) as a feature reference. It is NOT the active codebase — the React + Convex stack is.
 
 <!-- convex-ai-start -->
 This project uses [Convex](https://convex.dev) as its backend.
