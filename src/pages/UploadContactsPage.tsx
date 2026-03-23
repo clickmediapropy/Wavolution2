@@ -9,9 +9,18 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  UploadCloud,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { parseCSV, chunk } from "@/lib/csv";
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 interface ImportResult {
   added: number;
@@ -24,6 +33,7 @@ export function UploadContactsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState("");
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -81,6 +91,25 @@ export function UploadContactsPage() {
     setFile(selected ?? null);
   }
 
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setIsDragging(false);
+    const dropped = e.dataTransfer.files[0];
+    if (dropped && !dropped.name.endsWith(".csv")) {
+      setError("Please select a CSV file");
+      setFile(null);
+      return;
+    }
+    setError("");
+    setResult(null);
+    setFile(dropped ?? null);
+  }
+
+  function clearFile() {
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   return (
     <div className="animate-fadeIn">
       {/* Header */}
@@ -124,22 +153,71 @@ export function UploadContactsPage() {
       {/* Upload area */}
       <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 mb-6">
         <div className="space-y-4">
-          <div>
-            <label
-              htmlFor="csv-file"
-              className="block text-sm font-medium text-zinc-300 mb-1"
-            >
-              CSV File
-            </label>
-            <input
-              ref={fileInputRef}
-              id="csv-file"
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              className="block w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-zinc-700 file:text-sm file:font-medium file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700"
-            />
+          {/* Drag-drop zone */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+              isDragging
+                ? "border-emerald-500 bg-emerald-500/5"
+                : "border-zinc-700 hover:border-zinc-600"
+            }`}
+          >
+            <UploadCloud className="w-10 h-10 text-zinc-500 mx-auto mb-3" />
+            <p className="text-zinc-300">Drag & drop your CSV file here</p>
+            <p className="text-zinc-500 text-sm mt-1">or click to browse</p>
           </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileChange}
+            className="hidden"
+            aria-label="CSV file input"
+          />
+
+          {/* File preview card */}
+          {file && (
+            <div className="bg-zinc-800 rounded-lg border border-zinc-700 p-4 flex items-center gap-3">
+              <FileText className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-zinc-200 font-medium truncate">
+                  {file.name}
+                </p>
+                <p className="text-xs text-zinc-500">
+                  {formatFileSize(file.size)}
+                </p>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearFile();
+                }}
+                className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors rounded"
+                aria-label="Remove file"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {error && (
             <div
