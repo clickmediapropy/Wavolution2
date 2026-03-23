@@ -48,6 +48,7 @@ const schema = defineSchema({
   contacts: defineTable({
     userId: v.id("users"),
     phone: v.string(),
+    name: v.optional(v.string()), // deprecated — kept for backward compat during migration
     firstName: v.optional(v.string()),
     lastName: v.optional(v.string()),
     status: v.string(),
