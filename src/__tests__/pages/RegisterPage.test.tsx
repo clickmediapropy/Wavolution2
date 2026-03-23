@@ -149,6 +149,6 @@ describe("RegisterPage", () => {
     );
 
     const link = screen.getByRole("link", { name: /sign in|log in|already have/i });
-    expect(link).toHaveAttribute("href", "/");
+    expect(link).toHaveAttribute("href", "/login");
   });
 });

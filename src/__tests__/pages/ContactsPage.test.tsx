@@ -97,12 +97,13 @@ describe("ContactsPage", () => {
     });
 
     renderPage();
-    expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.getByText("Bob")).toBeInTheDocument();
+    // Both mobile and desktop views render in jsdom
+    expect(screen.getAllByText("Alice").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Bob").length).toBeGreaterThanOrEqual(1);
 
     // Click "pending" filter chip
     fireEvent.click(screen.getByRole("button", { name: /pending/i }));
-    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getAllByText("Alice").length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText("Bob")).not.toBeInTheDocument();
   });
 
@@ -117,8 +118,8 @@ describe("ContactsPage", () => {
     });
 
     renderPage();
-    expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.getByText("+1234567890")).toBeInTheDocument();
+    expect(screen.getAllByText("Alice").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("+1234567890").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows Load more when more contacts available", () => {

@@ -148,7 +148,71 @@ export function ContactTable({
         </div>
       )}
 
-      <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
+      {/* Mobile card layout */}
+      <div className="md:hidden space-y-3">
+        {sortedContacts.map((contact) => {
+          const config = statusConfig[contact.status] ?? defaultStatus;
+          return (
+            <div
+              key={contact._id}
+              className="bg-zinc-900 rounded-xl border border-zinc-800 p-4"
+            >
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(contact._id)}
+                    onChange={() => toggleSelect(contact._id)}
+                    className="rounded border-zinc-600 bg-zinc-800 accent-emerald-500 mt-0.5"
+                    aria-label={`Select ${contact.name || contact.phone}`}
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-zinc-200">
+                      {contact.name || (
+                        <span className="text-zinc-600">&mdash;</span>
+                      )}
+                    </p>
+                    <p className="text-xs font-mono text-zinc-400">
+                      {contact.phone}
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium",
+                    config.bg,
+                    config.text,
+                  )}
+                >
+                  <span
+                    className={cn("w-1.5 h-1.5 rounded-full", config.dot)}
+                  />
+                  {contact.status}
+                </span>
+              </div>
+              <div className="flex justify-end gap-1 mt-2">
+                <button
+                  onClick={() => onEdit(contact)}
+                  className="p-1.5 text-zinc-600 hover:text-zinc-300 transition-colors"
+                  aria-label="Edit"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => onDelete(contact._id)}
+                  className="p-1.5 text-zinc-600 hover:text-red-400 transition-colors"
+                  aria-label="Delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table layout */}
+      <div className="hidden md:block bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-zinc-800 bg-zinc-800/50">

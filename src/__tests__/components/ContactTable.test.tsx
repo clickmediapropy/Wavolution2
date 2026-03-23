@@ -28,14 +28,16 @@ describe("ContactTable", () => {
     expect(screen.getByText("Actions")).toBeInTheDocument();
   });
 
-  it("renders contact rows with correct data", () => {
+  // Both mobile cards and desktop table render in jsdom (no CSS media query support)
+  it("renders contact data in both mobile and desktop views", () => {
     render(<ContactTable {...defaultProps} />);
 
-    expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.getByText("+1234567890")).toBeInTheDocument();
-    expect(screen.getByText("Bob")).toBeInTheDocument();
-    expect(screen.getByText("+0987654321")).toBeInTheDocument();
-    expect(screen.getByText("+1111111111")).toBeInTheDocument();
+    // Each contact appears twice (mobile card + desktop table row)
+    expect(screen.getAllByText("Alice")).toHaveLength(2);
+    expect(screen.getAllByText("+1234567890")).toHaveLength(2);
+    expect(screen.getAllByText("Bob")).toHaveLength(2);
+    expect(screen.getAllByText("+0987654321")).toHaveLength(2);
+    expect(screen.getAllByText("+1111111111")).toHaveLength(2);
   });
 
   it("renders empty state when contacts array is empty", () => {
@@ -64,18 +66,20 @@ describe("ContactTable", () => {
     expect(onLoadMore).toHaveBeenCalledTimes(1);
   });
 
-  it("renders edit button per row", () => {
+  // 3 contacts x 2 views (mobile + desktop) = 6 edit buttons
+  it("renders edit button per contact in both views", () => {
     render(<ContactTable {...defaultProps} />);
 
     const editButtons = screen.getAllByRole("button", { name: /edit/i });
-    expect(editButtons).toHaveLength(3);
+    expect(editButtons).toHaveLength(6);
   });
 
-  it("renders delete button per row", () => {
+  // 3 contacts x 2 views = 6 delete buttons
+  it("renders delete button per contact in both views", () => {
     render(<ContactTable {...defaultProps} />);
 
-    const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
-    expect(deleteButtons).toHaveLength(3);
+    const deleteButtons = screen.getAllByRole("button", { name: /^delete$/i });
+    expect(deleteButtons).toHaveLength(6);
   });
 
   it("calls onEdit with contact when edit button clicked", () => {
@@ -91,7 +95,7 @@ describe("ContactTable", () => {
     const onDelete = vi.fn();
     render(<ContactTable {...defaultProps} onDelete={onDelete} />);
 
-    const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
+    const deleteButtons = screen.getAllByRole("button", { name: /^delete$/i });
     fireEvent.click(deleteButtons[0]!);
     expect(onDelete).toHaveBeenCalledWith("c1");
   });
@@ -100,38 +104,30 @@ describe("ContactTable", () => {
     render(<ContactTable {...defaultProps} />);
 
     const checkboxes = screen.getAllByRole("checkbox");
-    // 1 select-all + 3 row checkboxes
-    expect(checkboxes.length).toBeGreaterThanOrEqual(4);
+    // 1 select-all (desktop) + 3 mobile checkboxes + 3 desktop checkboxes = 7
+    expect(checkboxes.length).toBeGreaterThanOrEqual(7);
   });
 
   it("enables bulk delete when contacts are selected", () => {
     const onDeleteSelected = vi.fn();
     render(<ContactTable {...defaultProps} onDeleteSelected={onDeleteSelected} />);
 
-    // Select first contact
+    // Click the first checkbox (mobile view, first contact)
     const checkboxes = screen.getAllByRole("checkbox");
-    fireEvent.click(checkboxes[1]!); // first row checkbox
+    fireEvent.click(checkboxes[0]!);
 
     const bulkDeleteBtn = screen.getByRole("button", { name: /delete selected/i });
     fireEvent.click(bulkDeleteBtn);
     expect(onDeleteSelected).toHaveBeenCalledWith(["c1"]);
   });
 
-  it("shows contact without name as dash or empty", () => {
+  it("shows status badges with correct text in both views", () => {
     render(<ContactTable {...defaultProps} />);
 
-    // Third contact has no name — should show a dash or placeholder
-    const rows = screen.getAllByRole("row");
-    // Header + 3 data rows
-    expect(rows).toHaveLength(4);
-  });
-
-  it("shows status badges with correct text", () => {
-    render(<ContactTable {...defaultProps} />);
-
-    expect(screen.getByText("pending")).toBeInTheDocument();
-    expect(screen.getByText("sent")).toBeInTheDocument();
-    expect(screen.getByText("failed")).toBeInTheDocument();
+    // Each status appears twice (mobile + desktop)
+    expect(screen.getAllByText("pending")).toHaveLength(2);
+    expect(screen.getAllByText("sent")).toHaveLength(2);
+    expect(screen.getAllByText("failed")).toHaveLength(2);
   });
 
   it("renders sortable Name header with chevron on click", () => {
@@ -140,9 +136,7 @@ describe("ContactTable", () => {
     const nameBtn = screen.getByRole("button", { name: /name/i });
     expect(nameBtn).toBeInTheDocument();
 
-    // Click to sort ascending — chevron should appear
     fireEvent.click(nameBtn);
-    // The button should now contain a ChevronUp (ascending)
     const svg = nameBtn.querySelector("svg");
     expect(svg).toBeInTheDocument();
   });
@@ -152,19 +146,14 @@ describe("ContactTable", () => {
 
     const nameBtn = screen.getByRole("button", { name: /name/i });
 
-    // Click once: ascending by name (Alice, Bob, then unnamed)
     fireEvent.click(nameBtn);
     const rows = screen.getAllByRole("row");
     // header + 3 data rows
     expect(rows).toHaveLength(4);
-    // First data row should be unnamed ("") — sorts before "Alice" in localeCompare asc
-    // Actually: "" < "Alice" < "Bob" in ascending
-    // But third contact has no name (undefined → ""), so: "" < "Alice" < "Bob"
 
     // Click again: descending by name
     fireEvent.click(nameBtn);
     const rowsDesc = screen.getAllByRole("row");
-    // Bob > Alice > "" in descending
     expect(rowsDesc[1]).toHaveTextContent("Bob");
   });
 
