@@ -1,14 +1,25 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { RecentMessages } from "@/components/RecentMessages";
 
 const mockUsePaginatedQuery = vi.fn();
+const mockUseQuery = vi.fn();
 
 vi.mock("convex/react", () => ({
   usePaginatedQuery: (...args: any[]) => mockUsePaginatedQuery(...args),
+  useQuery: (...args: any[]) => mockUseQuery(...args),
 }));
 
 describe("RecentMessages", () => {
+  beforeEach(() => {
+    mockUseQuery.mockReturnValue({
+      page: [],
+      isDone: true,
+      continueCursor: "",
+    });
+  });
+
   it("shows empty state when no messages", () => {
     mockUsePaginatedQuery.mockReturnValue({
       results: [],
@@ -17,7 +28,11 @@ describe("RecentMessages", () => {
       loadMore: vi.fn(),
     });
 
-    render(<RecentMessages />);
+    render(
+      <MemoryRouter>
+        <RecentMessages />
+      </MemoryRouter>,
+    );
 
     expect(screen.getByText("No messages sent yet")).toBeInTheDocument();
   });
@@ -45,7 +60,11 @@ describe("RecentMessages", () => {
       loadMore: vi.fn(),
     });
 
-    render(<RecentMessages />);
+    render(
+      <MemoryRouter>
+        <RecentMessages />
+      </MemoryRouter>,
+    );
 
     expect(screen.getByText("+111222333")).toBeInTheDocument();
     expect(screen.getByText("+444555666")).toBeInTheDocument();
@@ -60,7 +79,11 @@ describe("RecentMessages", () => {
       loadMore: vi.fn(),
     });
 
-    render(<RecentMessages />);
+    render(
+      <MemoryRouter>
+        <RecentMessages />
+      </MemoryRouter>,
+    );
 
     expect(screen.getByText("Recent Messages")).toBeInTheDocument();
   });
