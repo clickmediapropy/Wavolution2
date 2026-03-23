@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 
 // Helper: get authenticated user ID or throw
 async function getAuthedUserId(
@@ -80,6 +81,11 @@ export const start = mutation({
       status: "running",
       startedAt: Date.now(),
     });
+
+    // Schedule the campaign worker to start processing
+    await ctx.scheduler.runAfter(0, internal.campaignWorker.processBatch, {
+      campaignId: args.id,
+    });
   },
 });
 
@@ -132,6 +138,11 @@ export const resume = mutation({
       throw new Error("Only paused campaigns can be resumed");
     }
     await ctx.db.patch(args.id, { status: "running" });
+
+    // Re-schedule the campaign worker to continue processing
+    await ctx.scheduler.runAfter(0, internal.campaignWorker.processBatch, {
+      campaignId: args.id,
+    });
   },
 });
 
