@@ -5,8 +5,7 @@ import { api } from "@convex/_generated/api";
 import { Users, Plus, Upload, Search } from "lucide-react";
 import { toast } from "sonner";
 import { ContactTable } from "@/components/ContactTable";
-import { AddContactDialog } from "@/components/AddContactDialog";
-import { EditContactDialog } from "@/components/EditContactDialog";
+import { ContactFormDialog } from "@/components/ContactFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 
 export function ContactsPage() {
@@ -36,15 +35,11 @@ export function ContactsPage() {
   const removeContact = useMutation(api.contacts.remove);
   const removeMultiple = useMutation(api.contacts.removeMultiple);
 
-  // Dialog state
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [addError, setAddError] = useState("");
-  const [addSubmitting, setAddSubmitting] = useState(false);
-
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  // Dialog state — unified for add/edit
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<any>(null);
-  const [editError, setEditError] = useState("");
-  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [dialogError, setDialogError] = useState("");
+  const [dialogSubmitting, setDialogSubmitting] = useState(false);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
@@ -57,50 +52,36 @@ export function ContactsPage() {
     : paginatedContacts.results;
 
   // Handlers
-  const handleAdd = useCallback(
-    async (data: { phone: string; name: string }) => {
-      setAddError("");
-      setAddSubmitting(true);
+  const handleFormSubmit = useCallback(
+    async (data: { id?: string; phone: string; name: string }) => {
+      setDialogError("");
+      setDialogSubmitting(true);
       try {
-        await addContact({
-          phone: data.phone,
-          name: data.name || undefined,
-        });
-        setAddDialogOpen(false);
-        toast.success("Contact added");
-      } catch (err) {
-        setAddError(
-          err instanceof Error ? err.message : "Failed to add contact",
-        );
-      } finally {
-        setAddSubmitting(false);
-      }
-    },
-    [addContact],
-  );
-
-  const handleEdit = useCallback(
-    async (data: { id: string; phone: string; name: string }) => {
-      setEditError("");
-      setEditSubmitting(true);
-      try {
-        await updateContact({
-          id: data.id as any,
-          phone: data.phone,
-          name: data.name || undefined,
-        });
-        setEditDialogOpen(false);
+        if (data.id) {
+          await updateContact({
+            id: data.id as any,
+            phone: data.phone,
+            name: data.name || undefined,
+          });
+          toast.success("Contact updated");
+        } else {
+          await addContact({
+            phone: data.phone,
+            name: data.name || undefined,
+          });
+          toast.success("Contact added");
+        }
+        setDialogOpen(false);
         setEditingContact(null);
-        toast.success("Contact updated");
       } catch (err) {
-        setEditError(
-          err instanceof Error ? err.message : "Failed to update contact",
+        setDialogError(
+          err instanceof Error ? err.message : "Failed to save contact",
         );
       } finally {
-        setEditSubmitting(false);
+        setDialogSubmitting(false);
       }
     },
-    [updateContact],
+    [addContact, updateContact],
   );
 
   const handleDelete = useCallback(
@@ -140,8 +121,8 @@ export function ContactsPage() {
 
   const openEdit = useCallback((contact: any) => {
     setEditingContact(contact);
-    setEditError("");
-    setEditDialogOpen(true);
+    setDialogError("");
+    setDialogOpen(true);
   }, []);
 
   return (
@@ -163,8 +144,9 @@ export function ContactsPage() {
           </Link>
           <button
             onClick={() => {
-              setAddError("");
-              setAddDialogOpen(true);
+              setEditingContact(null);
+              setDialogError("");
+              setDialogOpen(true);
             }}
             className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 transition-colors"
             aria-label="Add Contact"
@@ -199,24 +181,16 @@ export function ContactsPage() {
       />
 
       {/* Dialogs */}
-      <AddContactDialog
-        isOpen={addDialogOpen}
-        onClose={() => setAddDialogOpen(false)}
-        onSubmit={handleAdd}
-        error={addError}
-        isSubmitting={addSubmitting}
-      />
-
-      <EditContactDialog
-        isOpen={editDialogOpen}
-        contact={editingContact}
+      <ContactFormDialog
+        isOpen={dialogOpen}
         onClose={() => {
-          setEditDialogOpen(false);
+          setDialogOpen(false);
           setEditingContact(null);
         }}
-        onSubmit={handleEdit}
-        error={editError}
-        isSubmitting={editSubmitting}
+        onSubmit={handleFormSubmit}
+        error={dialogError}
+        isSubmitting={dialogSubmitting}
+        contact={editingContact}
       />
 
       <DeleteConfirmDialog
