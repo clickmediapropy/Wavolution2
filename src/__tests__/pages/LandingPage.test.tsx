@@ -11,7 +11,7 @@ describe("LandingPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("at Scale")).toBeInTheDocument();
+    expect(screen.getByText(/at Scale/)).toBeInTheDocument();
   });
 
   it("renders sign in CTA", () => {

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { MessageSquare, Send, Users, Megaphone, ArrowRight } from "lucide-react";
+import { MessageSquare, Send, Users, Megaphone, ArrowRight, Zap } from "lucide-react";
 
 const VALUE_PROPS = [
   {
@@ -30,10 +30,22 @@ export function LandingPage() {
           </div>
         </div>
 
-        <h1 className="text-4xl sm:text-5xl font-bold text-zinc-100 mb-4 tracking-tight">
+        <aside className="mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-700 bg-zinc-800/50 text-sm text-zinc-300">
+          <Zap className="w-4 h-4 text-emerald-400" />
+          Now with WhatsApp Business API
+        </aside>
+
+        <h1
+          className="text-4xl sm:text-5xl font-bold mb-4 tracking-tight"
+          style={{
+            background: "linear-gradient(to bottom, #fff, rgba(255,255,255,0.6))",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
           WhatsApp Messaging
           <br />
-          <span className="text-emerald-400">at Scale</span>
+          at Scale
         </h1>
 
         <p className="text-lg text-zinc-400 max-w-xl mx-auto mb-8">
@@ -56,6 +68,51 @@ export function LandingPage() {
             Create Account
           </Link>
         </div>
+
+        {/* Dashboard mockup with glow */}
+        <div className="relative mt-16 max-w-4xl mx-auto">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 -z-10 bg-emerald-500/20 blur-3xl rounded-full scale-75"
+          />
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-2xl">
+            {/* Fake stat cards */}
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="bg-zinc-800 rounded-lg p-3">
+                  <div className="h-2 w-12 bg-zinc-700 rounded mb-2" />
+                  <div className="h-4 w-8 bg-zinc-700 rounded" />
+                </div>
+              ))}
+            </div>
+            {/* Fake table rows */}
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex gap-3 py-2 border-t border-zinc-800">
+                <div className="h-3 w-3 bg-zinc-700 rounded-full" />
+                <div className="h-3 w-24 bg-zinc-700 rounded" />
+                <div className="h-3 w-32 bg-zinc-700 rounded ml-auto" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Features grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mt-16 mb-16">
+        {[
+          { icon: <Send className="w-5 h-5" />, label: "Bulk Messaging" },
+          { icon: <Users className="w-5 h-5" />, label: "CSV Import" },
+          { icon: <Megaphone className="w-5 h-5" />, label: "Campaign Tracking" },
+          { icon: <MessageSquare className="w-5 h-5" />, label: "WhatsApp API" },
+        ].map((feat) => (
+          <div
+            key={feat.label}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl border border-zinc-800 bg-zinc-900/50 text-center"
+          >
+            <div className="text-emerald-400">{feat.icon}</div>
+            <span className="text-xs font-medium text-zinc-400">{feat.label}</span>
+          </div>
+        ))}
       </div>
 
       {/* Value props */}
