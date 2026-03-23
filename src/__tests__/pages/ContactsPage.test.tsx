@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { ContactsPage } from "@/pages/ContactsPage";
@@ -63,6 +63,47 @@ describe("ContactsPage", () => {
   it("shows empty state when no contacts", () => {
     renderPage();
     expect(screen.getByText(/no contacts/i)).toBeInTheDocument();
+  });
+
+  it("renders count badge with total count", () => {
+    mockUseQuery.mockReturnValue(42);
+    renderPage();
+    expect(screen.getByText("42")).toBeInTheDocument();
+  });
+
+  it("renders count badge as 0 when count is undefined", () => {
+    mockUseQuery.mockReturnValue(undefined);
+    renderPage();
+    expect(screen.getByText("0")).toBeInTheDocument();
+  });
+
+  it("renders filter chips for all statuses", () => {
+    renderPage();
+    expect(screen.getByRole("button", { name: /all/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /pending/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sent/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /failed/i })).toBeInTheDocument();
+  });
+
+  it("filters contacts by status when chip clicked", () => {
+    mockUsePaginatedQuery.mockReturnValue({
+      results: [
+        { _id: "c1", _creationTime: 1000, userId: "u1", phone: "+1111111111", name: "Alice", status: "pending" },
+        { _id: "c2", _creationTime: 900, userId: "u1", phone: "+2222222222", name: "Bob", status: "sent" },
+      ],
+      status: "Exhausted",
+      loadMore: vi.fn(),
+      isLoading: false,
+    });
+
+    renderPage();
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getByText("Bob")).toBeInTheDocument();
+
+    // Click "pending" filter chip
+    fireEvent.click(screen.getByRole("button", { name: /pending/i }));
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.queryByText("Bob")).not.toBeInTheDocument();
   });
 
   it("renders contacts when data exists", () => {

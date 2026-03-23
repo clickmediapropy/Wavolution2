@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Pencil, Trash2, Users, Loader2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Pencil, Trash2, Users, Loader2, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Contact {
@@ -20,7 +20,16 @@ interface ContactTableProps {
   onEdit: (contact: Contact) => void;
   onDelete: (id: string) => void;
   onDeleteSelected: (ids: string[]) => void;
+  totalCount?: number;
 }
+
+const statusPriority: Record<string, number> = {
+  pending: 0,
+  sent: 1,
+  failed: 2,
+};
+
+type SortField = "name" | "status" | null;
 
 const statusConfig: Record<
   string,
@@ -57,8 +66,33 @@ export function ContactTable({
   onEdit,
   onDelete,
   onDeleteSelected,
+  totalCount,
 }: ContactTableProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function handleSort(field: "name" | "status") {
+    if (sortField === field) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  }
+
+  const sortedContacts = useMemo(() => {
+    if (!sortField) return contacts;
+    return [...contacts].sort((a, b) => {
+      let cmp: number;
+      if (sortField === "name") {
+        cmp = (a.name ?? "").localeCompare(b.name ?? "");
+      } else {
+        cmp = (statusPriority[a.status] ?? 99) - (statusPriority[b.status] ?? 99);
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [contacts, sortField, sortDir]);
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -130,13 +164,31 @@ export function ContactTable({
                 />
               </th>
               <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                Name
+                <button
+                  type="button"
+                  onClick={() => handleSort("name")}
+                  className="inline-flex items-center gap-1 hover:text-zinc-200 transition-colors"
+                >
+                  Name
+                  {sortField === "name" && (
+                    sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                  )}
+                </button>
               </th>
               <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">
                 Phone
               </th>
               <th className="text-left px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">
-                Status
+                <button
+                  type="button"
+                  onClick={() => handleSort("status")}
+                  className="inline-flex items-center gap-1 hover:text-zinc-200 transition-colors"
+                >
+                  Status
+                  {sortField === "status" && (
+                    sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                  )}
+                </button>
               </th>
               <th className="text-right px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">
                 Actions
@@ -144,7 +196,7 @@ export function ContactTable({
             </tr>
           </thead>
           <tbody>
-            {contacts.map((contact) => {
+            {sortedContacts.map((contact) => {
               const config = statusConfig[contact.status] ?? defaultStatus;
               return (
                 <tr
@@ -209,19 +261,21 @@ export function ContactTable({
       </div>
 
       {canLoadMore && (
-        <div className="mt-4 text-center">
+        <div className="mt-4">
           <button
             onClick={onLoadMore}
             disabled={isLoadingMore}
-            className="px-6 py-2 text-sm font-medium text-zinc-400 border border-zinc-700 rounded-lg hover:bg-zinc-800 transition-colors disabled:opacity-50"
+            className="w-full py-3 text-sm font-medium text-zinc-400 bg-zinc-800/50 border border-zinc-700 rounded-xl hover:bg-zinc-800 transition-colors disabled:opacity-50"
           >
             {isLoadingMore ? (
-              <span className="flex items-center gap-2">
+              <span className="flex items-center justify-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Loading...
               </span>
             ) : (
-              "Load more"
+              totalCount !== undefined
+                ? `Load more · ${contacts.length} of ${totalCount}`
+                : "Load more"
             )}
           </button>
         </div>

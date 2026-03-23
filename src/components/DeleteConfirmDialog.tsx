@@ -34,6 +34,12 @@ export function DeleteConfirmDialog({
           permanently removed.
         </p>
 
+        {count > 5 && (
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 text-sm text-amber-400 mb-4 text-left">
+            ⚠ You are about to delete {count} contacts. This is a large batch operation that cannot be undone.
+          </div>
+        )}
+
         <div className="flex gap-3">
           <button
             type="button"

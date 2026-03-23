@@ -44,4 +44,17 @@ describe("DeleteConfirmDialog", () => {
 
     expect(screen.getByRole("heading", { name: /1 contact/i })).toBeInTheDocument();
   });
+
+  it("shows bulk warning when count > 5", () => {
+    render(<DeleteConfirmDialog {...defaultProps} count={8} />);
+
+    expect(screen.getByText(/you are about to delete 8 contacts/i)).toBeInTheDocument();
+    expect(screen.getByText(/large batch operation/i)).toBeInTheDocument();
+  });
+
+  it("does not show bulk warning when count <= 5", () => {
+    render(<DeleteConfirmDialog {...defaultProps} count={3} />);
+
+    expect(screen.queryByText(/large batch operation/i)).not.toBeInTheDocument();
+  });
 });

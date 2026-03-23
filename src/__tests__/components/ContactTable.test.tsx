@@ -83,7 +83,7 @@ describe("ContactTable", () => {
     render(<ContactTable {...defaultProps} onEdit={onEdit} />);
 
     const editButtons = screen.getAllByRole("button", { name: /edit/i });
-    fireEvent.click(editButtons[0]);
+    fireEvent.click(editButtons[0]!);
     expect(onEdit).toHaveBeenCalledWith(mockContacts[0]);
   });
 
@@ -92,7 +92,7 @@ describe("ContactTable", () => {
     render(<ContactTable {...defaultProps} onDelete={onDelete} />);
 
     const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
-    fireEvent.click(deleteButtons[0]);
+    fireEvent.click(deleteButtons[0]!);
     expect(onDelete).toHaveBeenCalledWith("c1");
   });
 
@@ -110,7 +110,7 @@ describe("ContactTable", () => {
 
     // Select first contact
     const checkboxes = screen.getAllByRole("checkbox");
-    fireEvent.click(checkboxes[1]); // first row checkbox
+    fireEvent.click(checkboxes[1]!); // first row checkbox
 
     const bulkDeleteBtn = screen.getByRole("button", { name: /delete selected/i });
     fireEvent.click(bulkDeleteBtn);
@@ -132,5 +132,62 @@ describe("ContactTable", () => {
     expect(screen.getByText("pending")).toBeInTheDocument();
     expect(screen.getByText("sent")).toBeInTheDocument();
     expect(screen.getByText("failed")).toBeInTheDocument();
+  });
+
+  it("renders sortable Name header with chevron on click", () => {
+    render(<ContactTable {...defaultProps} />);
+
+    const nameBtn = screen.getByRole("button", { name: /name/i });
+    expect(nameBtn).toBeInTheDocument();
+
+    // Click to sort ascending — chevron should appear
+    fireEvent.click(nameBtn);
+    // The button should now contain a ChevronUp (ascending)
+    const svg = nameBtn.querySelector("svg");
+    expect(svg).toBeInTheDocument();
+  });
+
+  it("sorts contacts by name ascending then descending", () => {
+    render(<ContactTable {...defaultProps} />);
+
+    const nameBtn = screen.getByRole("button", { name: /name/i });
+
+    // Click once: ascending by name (Alice, Bob, then unnamed)
+    fireEvent.click(nameBtn);
+    const rows = screen.getAllByRole("row");
+    // header + 3 data rows
+    expect(rows).toHaveLength(4);
+    // First data row should be unnamed ("") — sorts before "Alice" in localeCompare asc
+    // Actually: "" < "Alice" < "Bob" in ascending
+    // But third contact has no name (undefined → ""), so: "" < "Alice" < "Bob"
+
+    // Click again: descending by name
+    fireEvent.click(nameBtn);
+    const rowsDesc = screen.getAllByRole("row");
+    // Bob > Alice > "" in descending
+    expect(rowsDesc[1]).toHaveTextContent("Bob");
+  });
+
+  it("renders sortable Status header", () => {
+    render(<ContactTable {...defaultProps} />);
+    const statusBtn = screen.getByRole("button", { name: /status/i });
+    expect(statusBtn).toBeInTheDocument();
+  });
+
+  it("shows full-width Load More with count label", () => {
+    render(<ContactTable {...defaultProps} canLoadMore={true} totalCount={50} />);
+
+    const btn = screen.getByRole("button", { name: /load more/i });
+    expect(btn).toBeInTheDocument();
+    expect(btn).toHaveTextContent("Load more · 3 of 50");
+    expect(btn.className).toContain("w-full");
+  });
+
+  it("shows plain Load More without count when totalCount not provided", () => {
+    render(<ContactTable {...defaultProps} canLoadMore={true} />);
+
+    const btn = screen.getByRole("button", { name: /load more/i });
+    expect(btn).toHaveTextContent("Load more");
+    expect(btn).not.toHaveTextContent("of");
   });
 });

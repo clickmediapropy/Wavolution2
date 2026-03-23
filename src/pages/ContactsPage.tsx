@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { usePaginatedQuery, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -7,6 +7,15 @@ import { toast } from "sonner";
 import { ContactTable } from "@/components/ContactTable";
 import { ContactFormDialog } from "@/components/ContactFormDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
+
+const statusFilters = ["all", "pending", "sent", "failed"] as const;
+type StatusFilter = (typeof statusFilters)[number];
+
+const statusConfig: Record<string, { bg: string; text: string; activeBg: string }> = {
+  pending: { bg: "border-amber-500/30 text-amber-400", text: "text-amber-400", activeBg: "bg-amber-500/20 border-amber-500/50 text-amber-400" },
+  sent: { bg: "border-emerald-500/30 text-emerald-400", text: "text-emerald-400", activeBg: "bg-emerald-500/20 border-emerald-500/50 text-emerald-400" },
+  failed: { bg: "border-red-500/30 text-red-400", text: "text-red-400", activeBg: "bg-red-500/20 border-red-500/50 text-red-400" },
+};
 
 export function ContactsPage() {
   // Search state
@@ -18,7 +27,11 @@ export function ContactsPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  // Status filter state
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
   // Queries
+  const totalCount = useQuery(api.contacts.count);
   const paginatedContacts = usePaginatedQuery(
     api.contacts.list,
     {},
@@ -45,11 +58,18 @@ export function ContactsPage() {
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Determine which contacts to show
+  // Determine which contacts to show, with optional status filter
   const isSearching = debouncedSearch.length > 0;
   const displayContacts = isSearching
     ? searchResults ?? []
     : paginatedContacts.results;
+  const filteredContacts = useMemo(
+    () =>
+      statusFilter === "all"
+        ? displayContacts
+        : displayContacts.filter((c: any) => c.status === statusFilter),
+    [displayContacts, statusFilter],
+  );
 
   // Handlers
   const handleFormSubmit = useCallback(
@@ -132,6 +152,9 @@ export function ContactsPage() {
         <div className="flex items-center gap-3">
           <Users className="w-7 h-7 text-emerald-500" />
           <h1 className="text-2xl font-bold text-zinc-100">Contacts</h1>
+          <span className="px-2.5 py-0.5 text-sm font-medium bg-emerald-500/10 text-emerald-400 rounded-full">
+            {totalCount ?? 0}
+          </span>
         </div>
         <div className="flex items-center gap-3">
           <Link
@@ -157,6 +180,29 @@ export function ContactsPage() {
         </div>
       </div>
 
+      {/* Filter chips */}
+      <div className="flex items-center gap-2 mb-4" role="group" aria-label="Filter by status">
+        {statusFilters.map((filter) => {
+          const isActive = statusFilter === filter;
+          const isAll = filter === "all";
+          const chipClass = isActive
+            ? isAll
+              ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
+              : statusConfig[filter]?.activeBg ?? ""
+            : "bg-transparent border-zinc-700 text-zinc-400 hover:bg-zinc-800";
+          return (
+            <button
+              key={filter}
+              onClick={() => setStatusFilter(filter)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors capitalize ${chipClass}`}
+              aria-pressed={isActive}
+            >
+              {filter}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Search */}
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
@@ -171,13 +217,14 @@ export function ContactsPage() {
 
       {/* Table */}
       <ContactTable
-        contacts={displayContacts as any}
+        contacts={filteredContacts as any}
         canLoadMore={!isSearching && paginatedContacts.status === "CanLoadMore"}
         isLoadingMore={paginatedContacts.isLoading}
         onLoadMore={() => paginatedContacts.loadMore(20)}
         onEdit={openEdit}
         onDelete={handleDelete}
         onDeleteSelected={handleDeleteSelected}
+        totalCount={totalCount ?? undefined}
       />
 
       {/* Dialogs */}
