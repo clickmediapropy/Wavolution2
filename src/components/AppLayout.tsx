@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Users,
   Send,
+  Smartphone,
   Menu,
   X,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/contacts", label: "Contacts", icon: Users },
   { to: "/send", label: "Send", icon: Send },
+  { to: "/whatsapp", label: "WhatsApp", icon: Smartphone },
 ] as const;
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>

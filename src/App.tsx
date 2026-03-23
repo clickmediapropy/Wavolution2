@@ -1,6 +1,6 @@
 import { ConvexReactClient } from "convex/react";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -11,8 +11,7 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ContactsPage } from "./pages/ContactsPage";
 import { UploadContactsPage } from "./pages/UploadContactsPage";
-import { SetupWhatsAppPage } from "./pages/SetupWhatsAppPage";
-import { ConnectWhatsAppPage } from "./pages/ConnectWhatsAppPage";
+import { WhatsAppPage } from "./pages/WhatsAppPage";
 import { SendMessagePage } from "./pages/SendMessagePage";
 import { BulkCampaignPage } from "./pages/BulkCampaignPage";
 import { CampaignStatusPage } from "./pages/CampaignStatusPage";
@@ -77,21 +76,15 @@ export default function App() {
                 }
               />
               <Route
-                path="/whatsapp/setup"
+                path="/whatsapp"
                 element={
                   <ProtectedRoute>
-                    <SetupWhatsAppPage />
+                    <WhatsAppPage />
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/whatsapp/connect"
-                element={
-                  <ProtectedRoute>
-                    <ConnectWhatsAppPage />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/whatsapp/setup" element={<Navigate to="/whatsapp" replace />} />
+              <Route path="/whatsapp/connect" element={<Navigate to="/whatsapp" replace />} />
               <Route
                 path="/send"
                 element={
