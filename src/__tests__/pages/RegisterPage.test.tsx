@@ -3,6 +3,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { RegisterPage } from "@/pages/RegisterPage";
 
+// Mock framer-motion
+vi.mock("framer-motion", () => ({
+  motion: {
+    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  },
+}));
+
 // Mock auth hooks
 const mockSignIn = vi.fn();
 vi.mock("@convex-dev/auth/react", () => ({

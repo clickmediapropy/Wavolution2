@@ -1,7 +1,12 @@
 import { FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { motion } from "framer-motion";
 import { MessageSquare, Eye, EyeOff } from "lucide-react";
+import {
+  getPasswordStrength,
+  STRENGTH_COLORS,
+} from "@/lib/passwordStrength";
 
 export function RegisterPage() {
   const { signIn } = useAuthActions();
@@ -13,6 +18,7 @@ export function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const strength = getPasswordStrength(password);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -35,7 +41,17 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[80vh] animate-fadeInUp">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="relative flex items-center justify-center min-h-[80vh]"
+    >
+      {/* Background glow decoration */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -z-10 w-72 h-72 rounded-full bg-emerald-500/20 blur-3xl"
+      />
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -106,6 +122,18 @@ export function RegisterPage() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {password && (
+              <div className="flex gap-1 mt-2">
+                {[1, 2, 3, 4].map((level) => (
+                  <div
+                    key={level}
+                    className={`h-1 flex-1 rounded-full transition-colors ${
+                      strength >= level ? STRENGTH_COLORS[strength] : "bg-zinc-700"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -136,7 +164,7 @@ export function RegisterPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-t from-emerald-600 via-emerald-500 to-emerald-400 hover:from-emerald-500 hover:via-emerald-400 hover:to-emerald-300 text-white py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Creating account..." : "Create Account"}
           </button>
@@ -149,6 +177,6 @@ export function RegisterPage() {
           </p>
         </form>
       </div>
-    </div>
+    </motion.div>
   );
 }
