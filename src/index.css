@@ -284,15 +284,13 @@
 /* Interactive states */
 @utility interactive-hover {
   transition: all 0.2s ease;
-}
-
-@utility interactive-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-@utility interactive-active:active {
-  transform: translateY(0);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  &:active {
+    transform: translateY(0);
+  }
 }
 
 @utility focus-ring {
@@ -325,16 +323,15 @@
 
 @utility status-dot-pulse {
   position: relative;
-}
-
-@utility status-dot-pulse::after {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  opacity: 0;
-  animation: pulse-ring 2s ease-out infinite;
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    opacity: 0;
+    animation: pulse-ring 2s ease-out infinite;
+  }
 }
 
 @keyframes pulse-ring {
@@ -351,22 +348,20 @@
 /* Card hover effects */
 @utility card-hover {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@utility card-hover:hover {
-  transform: translateY(-2px);
-  border-color: rgba(63, 63, 70, 0.8);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(63, 63, 70, 0.8);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  }
 }
 
 /* Scrollbar hide */
 @utility scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-@utility scrollbar-hide::-webkit-scrollbar {
-  display: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Line clamp utilities */
