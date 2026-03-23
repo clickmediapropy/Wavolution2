@@ -164,7 +164,7 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         <button
           onClick={() => void signOut()}
           className={cn(
-            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all group",
+            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-all group",
             isCollapsed && "justify-center"
           )}
         >
