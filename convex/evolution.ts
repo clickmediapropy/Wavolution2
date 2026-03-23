@@ -259,3 +259,44 @@ export const deleteInstance = action({
     return { success: true };
   },
 });
+
+// Check which phone numbers have WhatsApp accounts
+export const checkNumbers = action({
+  args: {
+    instanceName: v.string(),
+    numbers: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    if (args.numbers.length === 0) return [];
+    if (args.numbers.length > 200) {
+      throw new Error("Cannot check more than 200 numbers at once");
+    }
+
+    const baseUrl = getBaseUrl();
+    const apiKey = getGlobalApiKey();
+
+    const res = await fetch(
+      `${baseUrl}/chat/whatsappNumbers/${args.instanceName}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: apiKey,
+        },
+        body: JSON.stringify({ numbers: args.numbers }),
+      },
+    );
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Failed to check numbers: ${text}`);
+    }
+
+    const results: Array<{ jid: string; exists: boolean; number: string }> =
+      await res.json();
+    return results;
+  },
+});

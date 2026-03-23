@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
   Upload,
@@ -12,10 +12,12 @@ import {
   UploadCloud,
   X,
   Download,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { parseCSV, chunk } from "@/lib/csv";
 import { motion } from "framer-motion";
+import { SearchableCombobox } from "@/components/SearchableCombobox";
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) {
@@ -28,10 +30,13 @@ interface ImportResult {
   added: number;
   duplicates: number;
   errors: number;
+  filtered?: number;
 }
 
 export function UploadContactsPage() {
   const importBatch = useMutation(api.contacts.importBatch);
+  const checkNumbers = useAction(api.evolution.checkNumbers);
+  const connectedInstances = useQuery(api.instances.listConnected);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
@@ -41,6 +46,26 @@ export function UploadContactsPage() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState("");
 
+  // WhatsApp validation
+  const [validateWhatsApp, setValidateWhatsApp] = useState(true);
+  const [selectedInstanceId, setSelectedInstanceId] = useState("");
+
+  // Auto-select if only one connected instance
+  if (connectedInstances?.length === 1 && !selectedInstanceId) {
+    setSelectedInstanceId(connectedInstances[0]!._id);
+  }
+
+  const instanceOptions = (connectedInstances ?? []).map((inst) => ({
+    value: inst._id,
+    label: inst.whatsappNumber
+      ? `${inst.name} (${inst.whatsappNumber})`
+      : inst.name,
+  }));
+
+  const selectedInstance = connectedInstances?.find(
+    (i) => i._id === selectedInstanceId,
+  );
+
   async function handleImport() {
     if (!file) return;
     setError("");
@@ -49,7 +74,7 @@ export function UploadContactsPage() {
 
     try {
       const text = await file.text();
-      const contacts = parseCSV(text);
+      let contacts = parseCSV(text);
 
       if (contacts.length === 0) {
         setError("No valid contacts found in CSV");
@@ -57,8 +82,54 @@ export function UploadContactsPage() {
         return;
       }
 
+      let filtered = 0;
+
+      // Validate against WhatsApp if enabled
+      if (validateWhatsApp && selectedInstance) {
+        setProgress("Checking WhatsApp numbers...");
+
+        const phones = contacts.map((c) => c.phone);
+        const phoneBatches = chunk(phones, 200);
+        const validPhones = new Set<string>();
+
+        for (let i = 0; i < phoneBatches.length; i++) {
+          setProgress(
+            `Checking numbers (${i + 1}/${phoneBatches.length})...`,
+          );
+          const results = await checkNumbers({
+            instanceName: selectedInstance.name,
+            numbers: phoneBatches[i]!,
+          });
+          for (const r of results) {
+            if (r.exists) {
+              validPhones.add(r.number);
+            }
+          }
+        }
+
+        const before = contacts.length;
+        contacts = contacts.filter((c) => validPhones.has(c.phone));
+        filtered = before - contacts.length;
+
+        if (contacts.length === 0) {
+          setResult({ added: 0, duplicates: 0, errors: 0, filtered });
+          setFile(null);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+          toast.info("No contacts have WhatsApp accounts");
+          setIsImporting(false);
+          setProgress("");
+          return;
+        }
+      }
+
+      // Import validated contacts in batches
       const batches = chunk(contacts, 100);
-      const totals: ImportResult = { added: 0, duplicates: 0, errors: 0 };
+      const totals: ImportResult = {
+        added: 0,
+        duplicates: 0,
+        errors: 0,
+        filtered,
+      };
 
       for (let i = 0; i < batches.length; i++) {
         setProgress(`Importing batch ${i + 1} of ${batches.length}...`);
@@ -112,6 +183,11 @@ export function UploadContactsPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
+  const canImport =
+    file &&
+    !isImporting &&
+    (!validateWhatsApp || selectedInstanceId);
+
   return (
     <div className="animate-fadeIn">
       {/* Header */}
@@ -162,6 +238,69 @@ export function UploadContactsPage() {
           <Download className="w-4 h-4" />
           Download sample template
         </a>
+      </div>
+
+      {/* WhatsApp validation toggle */}
+      <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="w-5 h-5 text-emerald-500" />
+            <div>
+              <h2 className="text-sm font-medium text-zinc-100">
+                WhatsApp Validation
+              </h2>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Only import numbers that have a WhatsApp account
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={validateWhatsApp}
+            onClick={() => setValidateWhatsApp(!validateWhatsApp)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              validateWhatsApp ? "bg-emerald-600" : "bg-zinc-700"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                validateWhatsApp ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+
+        {validateWhatsApp && (
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+              WhatsApp Instance
+            </label>
+            {instanceOptions.length === 0 ? (
+              <p className="text-sm text-amber-400">
+                No connected WhatsApp instances.{" "}
+                <Link
+                  to="/whatsapp"
+                  className="underline hover:text-amber-300"
+                >
+                  Connect one first
+                </Link>
+                .
+              </p>
+            ) : instanceOptions.length === 1 ? (
+              <p className="text-sm text-zinc-300">
+                Using: {instanceOptions[0]!.label}
+              </p>
+            ) : (
+              <SearchableCombobox
+                options={instanceOptions}
+                value={selectedInstanceId}
+                onChange={setSelectedInstanceId}
+                placeholder="Choose a WhatsApp instance..."
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Upload area */}
@@ -254,10 +393,14 @@ export function UploadContactsPage() {
 
           <button
             onClick={handleImport}
-            disabled={!file || isImporting}
+            disabled={!canImport}
             className="w-full px-4 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isImporting ? "Importing..." : "Import Contacts"}
+            {isImporting
+              ? "Importing..."
+              : validateWhatsApp
+                ? "Validate & Import"
+                : "Import Contacts"}
           </button>
         </div>
       </div>
@@ -269,13 +412,23 @@ export function UploadContactsPage() {
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             Import Complete
           </h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div
+            className={`grid gap-4 ${result.filtered !== undefined && result.filtered > 0 ? "grid-cols-4" : "grid-cols-3"}`}
+          >
             <div className="bg-emerald-500/10 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-emerald-400">
                 {result.added}
               </div>
               <div className="text-xs text-emerald-500 mt-1">Added</div>
             </div>
+            {result.filtered !== undefined && result.filtered > 0 && (
+              <div className="bg-zinc-500/10 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-zinc-400">
+                  {result.filtered}
+                </div>
+                <div className="text-xs text-zinc-500 mt-1">No WhatsApp</div>
+              </div>
+            )}
             <div className="bg-amber-500/10 rounded-lg p-4 text-center">
               <div className="text-2xl font-bold text-amber-400">
                 {result.duplicates}
