@@ -102,3 +102,17 @@ node_modules/
 # Convex
 convex/_generated/
 .vercel
+
+# ── GSD baseline (auto-generated) ──
+.gsd
+*~
+*.code-workspace
+.env.*
+!.env.example
+.next/
+*.pyc
+.venv/
+target/
+vendor/
+coverage/
+.cache/

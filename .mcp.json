@@ -3,6 +3,10 @@
     "axiom": {
       "command": "npx",
       "args": ["-y", "mcp-remote", "https://mcp.axiom.co/mcp"]
+    },
+    "magic": {
+      "command": "npx",
+      "args": ["-y", "@21st-dev/magic@latest"]
     }
   }
 }
