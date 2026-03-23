@@ -65,4 +65,19 @@ describe("SetupWhatsAppPage", () => {
 
     expect(screen.getByRole("status")).toBeInTheDocument();
   });
+
+  it("renders StepIndicator with 'Create Instance' step visible", () => {
+    mockUseQuery.mockReturnValue({ _id: "user123", instanceCreated: false });
+
+    render(
+      <MemoryRouter>
+        <SetupWhatsAppPage />
+      </MemoryRouter>,
+    );
+
+    // "Create Instance" appears in both the step indicator and the button
+    expect(screen.getAllByText("Create Instance").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Scan QR Code")).toBeInTheDocument();
+    expect(screen.getByText("Start Messaging")).toBeInTheDocument();
+  });
 });

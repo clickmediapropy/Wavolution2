@@ -85,4 +85,45 @@ describe("ConnectWhatsAppPage", () => {
       screen.queryByRole("heading", { name: /scan qr code/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("renders StepIndicator with 'Scan QR Code' step visible", () => {
+    mockUseQuery.mockReturnValue({
+      instanceCreated: true,
+      whatsappConnected: false,
+      evolutionInstanceName: "hub_abc12345",
+    });
+
+    render(
+      <MemoryRouter>
+        <ConnectWhatsAppPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Create Instance")).toBeInTheDocument();
+    // "Scan QR Code" appears in both heading and step indicator
+    expect(screen.getAllByText("Scan QR Code").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Start Messaging")).toBeInTheDocument();
+  });
+
+  it("shows skeleton placeholder when QR is loading", () => {
+    mockUseQuery.mockReturnValue({
+      instanceCreated: true,
+      whatsappConnected: false,
+      evolutionInstanceName: "hub_abc12345",
+    });
+    // The action is async and won't resolve during this render,
+    // so isLoadingQr will be true during fetchQr
+    mockAction.mockImplementation(() => new Promise(() => {})); // never resolves
+
+    render(
+      <MemoryRouter>
+        <ConnectWhatsAppPage />
+      </MemoryRouter>,
+    );
+
+    // The skeleton has role="status" and aria-label="Loading QR code"
+    const skeleton = screen.getByLabelText("Loading QR code");
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton.className).toContain("animate-pulse");
+  });
 });

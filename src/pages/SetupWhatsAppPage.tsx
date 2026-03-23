@@ -4,6 +4,13 @@ import { useQuery, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Loader2, Smartphone } from "lucide-react";
 import { toast } from "sonner";
+import { StepIndicator } from "@/components/StepIndicator";
+
+const SETUP_STEPS = [
+  { label: "Create Instance" },
+  { label: "Scan QR Code" },
+  { label: "Start Messaging" },
+];
 
 export function SetupWhatsAppPage() {
   const user = useQuery(api.users.currentUser);
@@ -48,6 +55,8 @@ export function SetupWhatsAppPage() {
         <Smartphone className="w-7 h-7 text-emerald-500" />
         <h1 className="text-2xl font-bold text-zinc-100">WhatsApp Setup</h1>
       </div>
+
+      <StepIndicator steps={SETUP_STEPS} currentStep={0} />
 
       <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-8 max-w-lg mx-auto text-center">
         <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -2,8 +2,16 @@ import { useState, useEffect, useCallback } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useQuery, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Loader2, QrCode, RefreshCw } from "lucide-react";
+import { QrCode, RefreshCw } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { StepIndicator } from "@/components/StepIndicator";
+
+const SETUP_STEPS = [
+  { label: "Create Instance" },
+  { label: "Scan QR Code" },
+  { label: "Start Messaging" },
+];
 
 export function ConnectWhatsAppPage() {
   const user = useQuery(api.users.currentUser);
@@ -80,22 +88,28 @@ export function ConnectWhatsAppPage() {
         <h1 className="text-2xl font-bold text-zinc-100">Scan QR Code</h1>
       </div>
 
+      <StepIndicator steps={SETUP_STEPS} currentStep={1} />
+
       <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-8 max-w-lg mx-auto text-center">
         <p className="text-zinc-400 mb-6">
           Open WhatsApp on your phone &rarr; Settings &rarr; Linked Devices
           &rarr; Link a Device &rarr; Scan the code below.
         </p>
 
-        <div className="w-64 h-64 mx-auto mb-6 bg-zinc-800 rounded-lg flex items-center justify-center border border-zinc-700">
+        <div className="w-64 h-64 mx-auto mb-6 bg-white rounded-lg p-4 flex items-center justify-center">
           {isLoadingQr ? (
-            <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
+            <div
+              className="w-full h-full animate-pulse bg-zinc-300 rounded-lg"
+              role="status"
+              aria-label="Loading QR code"
+            />
           ) : error ? (
             <p className="text-sm text-red-400 px-4">{error}</p>
           ) : qrBase64 ? (
             <img
               src={qrBase64}
               alt="WhatsApp QR Code"
-              className="w-full h-full object-contain p-2"
+              className="w-full h-full object-contain"
             />
           ) : (
             <p className="text-sm text-zinc-500">No QR code available</p>
