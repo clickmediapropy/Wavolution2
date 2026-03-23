@@ -24,7 +24,7 @@ describe("RegisterPage", () => {
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^confirm password$/i)).toBeInTheDocument();
   });
 
   it("renders Create Account button", () => {
@@ -47,7 +47,7 @@ describe("RegisterPage", () => {
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: "Test User" } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "test@example.com" } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "password123" } });
-    fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: "different" } });
+    fireEvent.change(screen.getByLabelText(/^confirm password$/i), { target: { value: "different" } });
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     await waitFor(() => {
@@ -68,7 +68,7 @@ describe("RegisterPage", () => {
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: "Test User" } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "test@example.com" } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "password123" } });
-    fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText(/^confirm password$/i), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     await waitFor(() => {
@@ -93,12 +93,52 @@ describe("RegisterPage", () => {
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: "Test User" } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "test@example.com" } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: "password123" } });
-    fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: "password123" } });
+    fireEvent.change(screen.getByLabelText(/^confirm password$/i), { target: { value: "password123" } });
     fireEvent.click(screen.getByRole("button", { name: /create account/i }));
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toBeInTheDocument();
     });
+  });
+
+  it("toggles password visibility", () => {
+    render(
+      <MemoryRouter>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    const passwordInput = screen.getByLabelText(/^password$/i);
+    expect(passwordInput).toHaveAttribute("type", "password");
+
+    const toggleButton = screen.getByRole("button", { name: /^show password$/i });
+    fireEvent.click(toggleButton);
+
+    expect(passwordInput).toHaveAttribute("type", "text");
+    expect(screen.getByRole("button", { name: /^hide password$/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^hide password$/i }));
+    expect(passwordInput).toHaveAttribute("type", "password");
+  });
+
+  it("toggles confirm password visibility", () => {
+    render(
+      <MemoryRouter>
+        <RegisterPage />
+      </MemoryRouter>
+    );
+
+    const confirmInput = screen.getByLabelText(/^confirm password$/i);
+    expect(confirmInput).toHaveAttribute("type", "password");
+
+    const toggleButton = screen.getByRole("button", { name: /^show confirm password$/i });
+    fireEvent.click(toggleButton);
+
+    expect(confirmInput).toHaveAttribute("type", "text");
+    expect(screen.getByRole("button", { name: /^hide confirm password$/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^hide confirm password$/i }));
+    expect(confirmInput).toHaveAttribute("type", "password");
   });
 
   it("has link to login page", () => {
