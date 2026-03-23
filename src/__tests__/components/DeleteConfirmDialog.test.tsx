@@ -1,0 +1,47 @@
+import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
+
+describe("DeleteConfirmDialog", () => {
+  const defaultProps = {
+    isOpen: true,
+    count: 3,
+    onConfirm: vi.fn(),
+    onCancel: vi.fn(),
+    isDeleting: false,
+  };
+
+  it("shows confirmation message with contact count", () => {
+    render(<DeleteConfirmDialog {...defaultProps} />);
+
+    expect(screen.getByRole("heading", { name: /3 contact/i })).toBeInTheDocument();
+  });
+
+  it("calls onConfirm when confirm button clicked", () => {
+    const onConfirm = vi.fn();
+    render(<DeleteConfirmDialog {...defaultProps} onConfirm={onConfirm} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onCancel when cancel button clicked", () => {
+    const onCancel = vi.fn();
+    render(<DeleteConfirmDialog {...defaultProps} onCancel={onCancel} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not render when isOpen is false", () => {
+    render(<DeleteConfirmDialog {...defaultProps} isOpen={false} />);
+
+    expect(screen.queryByText(/3 contact/i)).not.toBeInTheDocument();
+  });
+
+  it("shows singular text for 1 contact", () => {
+    render(<DeleteConfirmDialog {...defaultProps} count={1} />);
+
+    expect(screen.getByRole("heading", { name: /1 contact/i })).toBeInTheDocument();
+  });
+});

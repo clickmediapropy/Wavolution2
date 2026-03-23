@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { useConvexAuth } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { MessageSquare, LogOut } from "lucide-react";
@@ -25,13 +26,41 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </Link>
 
             {isAuthenticated && (
-              <button
-                onClick={() => void signOut()}
-                className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600 transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
-              </button>
+              <div className="flex items-center gap-1">
+                <NavLink
+                  to="/dashboard"
+                  className={({ isActive }) =>
+                    cn(
+                      "px-3 py-2 text-sm rounded-lg transition-colors",
+                      isActive
+                        ? "text-blue-600 font-medium bg-blue-50"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
+                    )
+                  }
+                >
+                  Dashboard
+                </NavLink>
+                <NavLink
+                  to="/contacts"
+                  className={({ isActive }) =>
+                    cn(
+                      "px-3 py-2 text-sm rounded-lg transition-colors",
+                      isActive
+                        ? "text-blue-600 font-medium bg-blue-50"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
+                    )
+                  }
+                >
+                  Contacts
+                </NavLink>
+                <button
+                  onClick={() => void signOut()}
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600 transition-colors px-3 py-2 rounded-lg hover:bg-red-50 ml-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

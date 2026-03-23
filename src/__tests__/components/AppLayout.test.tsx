@@ -99,4 +99,33 @@ describe("AppLayout", () => {
 
     expect(screen.queryByRole("button", { name: /log\s?out|sign\s?out/i })).not.toBeInTheDocument();
   });
+
+  it("shows Dashboard and Contacts nav links when authenticated", () => {
+    mockUseConvexAuth.mockReturnValue({ isAuthenticated: true, isLoading: false });
+
+    render(
+      <MemoryRouter>
+        <AppLayout>
+          <div>child</div>
+        </AppLayout>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole("link", { name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /contacts/i })).toBeInTheDocument();
+  });
+
+  it("hides nav links when not authenticated", () => {
+    mockUseConvexAuth.mockReturnValue({ isAuthenticated: false, isLoading: false });
+
+    render(
+      <MemoryRouter>
+        <AppLayout>
+          <div>child</div>
+        </AppLayout>
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByRole("link", { name: /contacts/i })).not.toBeInTheDocument();
+  });
 });

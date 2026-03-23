@@ -7,6 +7,8 @@ import { AnonymousRoute } from "./components/AnonymousRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { ContactsPage } from "./pages/ContactsPage";
+import { UploadContactsPage } from "./pages/UploadContactsPage";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -37,6 +39,22 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/contacts"
+              element={
+                <ProtectedRoute>
+                  <ContactsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/contacts/upload"
+              element={
+                <ProtectedRoute>
+                  <UploadContactsPage />
                 </ProtectedRoute>
               }
             />

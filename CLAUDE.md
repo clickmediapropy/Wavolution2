@@ -41,6 +41,67 @@ npx convex dev --once            # push schema/functions once
 npx convex dashboard             # open Convex dashboard
 ```
 
+## Tool Routing
+
+Before starting any task, identify which category below it falls into and use the listed skills/CLIs.
+
+### Convex Backend
+| Task | Skill | CLI |
+|------|-------|-----|
+| Write queries/mutations/actions | `convex-functions` + read `convex/_generated/ai/guidelines.md` | `npx convex dev` |
+| Modify schema.ts | `convex-schema-validator` | `npx convex dev --once` |
+| Real-time subscriptions, pagination | `convex-realtime` | |
+| File uploads (CSV, media) | `convex-file-storage` | |
+| HTTP endpoints, webhooks | `convex-http-actions` | |
+| Auth changes | `convex-setup-auth` | |
+| Security review | `convex-security-check` | |
+| Performance issues | `convex-performance-audit` | |
+| General architecture | `convex-best-practices` | |
+
+### Frontend (React + Vite)
+| Task | Skill | CLI |
+|------|-------|-----|
+| New page or component | `react-vite-best-practices` | `vp dev` |
+| Vite config, build issues | `vite` | `vp build`, `vp check` |
+| UI design, visual polish | `frontend-design` or `ui-ux-pro-max` | |
+| Accessibility | `accessibility-a11y` | |
+
+### WhatsApp / Evolution API
+| Task | Skill | CLI |
+|------|-------|-----|
+| Evolution API integration | `evolution-api` | |
+| Test/manage WhatsApp instances | `evo-cli` | `evo-cli instance list` |
+| Send test messages | `evo-cli` | `evo-cli message send-text` |
+
+### Infrastructure
+| Task | Skill | CLI |
+|------|-------|-----|
+| Dockerize campaign worker | `docker-expert` | |
+| Process management on VPS | `pm2` | `ssh contabo` |
+| Deploy, env vars, domains | use vercel skill | `vercel`, `vercel env` |
+| Build failures | check logs | `vercel logs`, `vercel inspect` |
+
+### Debugging
+| Task | Skill | CLI |
+|------|-------|-----|
+| Production issues | `axiom-sre` | Axiom MCP (`mcp__axiom__queryDataset`) |
+| Systematic debugging | `fix` | |
+
+### Research
+| Task | Skill | CLI |
+|------|-------|-----|
+| Look up external docs | `tavily-search` | `tvly search` |
+| Find a skill | `find-skills` | `npx skills find [query]` |
+
+### Compound Workflows
+- **New Convex function + React page:** `convex-functions` → write function → `react-vite-best-practices` → write page → `npx vitest run`
+- **CSV import:** `convex-file-storage` (upload) → `convex-functions` (parse) → `convex-realtime` (progress)
+- **Campaign system:** `evolution-api` → `convex-http-actions` → `docker-expert` → `pm2`
+- **Deploy to prod:** `vp check` → `npx vitest run` → `vercel --prod` → `axiom-sre` (verify)
+
+### Active Phase
+**Phase 2 (Contact Management)** — Focus: `convex-functions`, `convex-realtime` (pagination), `react-vite-best-practices`
+
 ## Architecture
 
 ### Communication Pattern
