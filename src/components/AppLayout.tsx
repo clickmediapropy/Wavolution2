@@ -12,6 +12,7 @@ import {
   Megaphone,
   Send,
   Smartphone,
+  Inbox,
   Menu,
   X,
   ChevronLeft,
@@ -22,6 +23,7 @@ import { Toaster } from "sonner";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/inbox", label: "Inbox", icon: Inbox },
   { to: "/contacts", label: "Contacts", icon: Users },
   { to: "/campaigns", label: "Campaigns", icon: Megaphone },
   { to: "/send", label: "Send Message", icon: Send },

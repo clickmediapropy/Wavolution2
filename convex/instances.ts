@@ -70,6 +70,34 @@ export const count = query({
   },
 });
 
+// Get the most recent disconnection timestamp for any user instance
+export const lastDisconnection = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthedUserId(ctx);
+    const instances = await ctx.db
+      .query("instances")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .take(50);
+
+    let latestDisconnect: number | null = null;
+    for (const inst of instances) {
+      const events = await ctx.db
+        .query("connectionEvents")
+        .withIndex("by_instanceId", (q) => q.eq("instanceId", inst._id))
+        .order("desc")
+        .take(10);
+
+      const lastClose = events.find((e) => e.state === "close");
+      if (lastClose && (!latestDisconnect || lastClose.timestamp > latestDisconnect)) {
+        latestDisconnect = lastClose.timestamp;
+      }
+    }
+
+    return latestDisconnect;
+  },
+});
+
 // Create a new instance record (called by evolution.createInstance after API call)
 export const create = mutation({
   args: {

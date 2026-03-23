@@ -16,6 +16,7 @@ import { SendMessagePage } from "./pages/SendMessagePage";
 import { BulkCampaignPage } from "./pages/BulkCampaignPage";
 import { CampaignStatusPage } from "./pages/CampaignStatusPage";
 import { CampaignHistoryPage } from "./pages/CampaignHistoryPage";
+import { InboxPage } from "./pages/InboxPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { WhatsAppGuard } from "./components/WhatsAppGuard";
 
@@ -57,6 +58,22 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inbox"
+                element={
+                  <ProtectedRoute>
+                    <InboxPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inbox/:conversationId"
+                element={
+                  <ProtectedRoute>
+                    <InboxPage />
                   </ProtectedRoute>
                 }
               />

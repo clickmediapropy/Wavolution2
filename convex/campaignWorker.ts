@@ -114,16 +114,67 @@ export const recordSuccess = internalMutation({
     instanceId: v.optional(v.id("instances")),
     phone: v.string(),
     message: v.string(),
+    whatsappMessageId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Find or create conversation for this contact
+    let conversation = await ctx.db
+      .query("conversations")
+      .withIndex("by_userId_and_phone", (q) =>
+        q.eq("userId", args.userId).eq("phone", args.phone),
+      )
+      .first();
+
+    if (!conversation) {
+      const contact = await ctx.db
+        .query("contacts")
+        .withIndex("by_userId_and_phone", (q) =>
+          q.eq("userId", args.userId).eq("phone", args.phone),
+        )
+        .unique();
+
+      const contactName = contact
+        ? [contact.firstName, contact.lastName].filter(Boolean).join(" ") ||
+          contact.name ||
+          args.phone
+        : args.phone;
+
+      const convId = await ctx.db.insert("conversations", {
+        userId: args.userId,
+        instanceId: args.instanceId,
+        contactId: contact?._id,
+        phone: args.phone,
+        status: "human",
+        unreadCount: 0,
+        hasBeenInteracted: true,
+        isArchived: false,
+        contactName,
+      });
+      conversation = await ctx.db.get(convId);
+    }
+
     await ctx.db.insert("messages", {
       userId: args.userId,
       instanceId: args.instanceId,
       campaignId: args.campaignId,
+      conversationId: conversation?._id,
       phone: args.phone,
       message: args.message,
       status: "sent",
+      whatsappMessageId: args.whatsappMessageId,
+      direction: "outgoing",
+      sentBy: "campaign",
     });
+
+    // Update conversation denormalized fields
+    if (conversation) {
+      await ctx.db.patch(conversation._id, {
+        lastMessageAt: Date.now(),
+        lastMessageText: args.message.slice(0, 200),
+        lastMessageDirection: "outbound",
+        hasBeenInteracted: true,
+      });
+    }
 
     const campaign = await ctx.db.get(args.campaignId);
     if (campaign) {
@@ -263,6 +314,8 @@ export const processBatch = internalAction({
       const message = personalizeMessage(campaign.messageTemplate, contact);
 
       try {
+        let apiResponse: Record<string, unknown>;
+
         if (mediaUrl) {
           const res = await fetch(
             `${baseUrl}/message/sendMedia/${instance.name}`,
@@ -284,6 +337,7 @@ export const processBatch = internalAction({
           if (!res.ok) {
             throw new Error(`HTTP ${res.status}: ${await res.text()}`);
           }
+          apiResponse = await res.json();
         } else {
           const res = await fetch(
             `${baseUrl}/message/sendText/${instance.name}`,
@@ -302,7 +356,12 @@ export const processBatch = internalAction({
           if (!res.ok) {
             throw new Error(`HTTP ${res.status}: ${await res.text()}`);
           }
+          apiResponse = await res.json();
         }
+
+        // Extract WhatsApp message ID from API response
+        const whatsappMessageId =
+          (apiResponse.key as Record<string, unknown>)?.id as string | undefined;
 
         await ctx.runMutation(internal.campaignWorker.recordSuccess, {
           campaignId: args.campaignId,
@@ -310,6 +369,7 @@ export const processBatch = internalAction({
           instanceId: campaign.instanceId,
           phone: contact.phone,
           message,
+          whatsappMessageId,
         });
       } catch (err) {
         console.error(`Campaign ${args.campaignId}: failed ${contact.phone}:`, err);

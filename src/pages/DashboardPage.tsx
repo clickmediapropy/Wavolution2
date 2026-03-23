@@ -8,12 +8,13 @@ import { RecentMessages } from "@/components/RecentMessages";
 import { QuickActions } from "@/components/QuickActions";
 import { staggerContainerVariants, staggerItemVariants } from "@/lib/transitions";
 
-// Generate mock sparkline data
-function generateSparklineData(baseValue: number, variance: number = 20): number[] {
-  return Array.from({ length: 7 }, () => {
-    const dayValue = baseValue + Math.random() * variance - variance / 2;
-    return Math.max(0, Math.round(dayValue));
-  });
+function formatResponseTime(minutes: number | null): string {
+  if (minutes === null) return "—";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remaining = minutes % 60;
+  if (remaining === 0) return `${hours}h`;
+  return `${hours}h ${remaining}m`;
 }
 
 export function DashboardPage() {
@@ -24,14 +25,37 @@ export function DashboardPage() {
   const campaigns = useQuery(api.campaigns.listByUser);
   const instanceCounts = useQuery(api.instances.count);
 
+  // Real analytics data
+  const dashboardStats = useQuery(api.messages.dashboardStats);
+  const messageDailyCounts = useQuery(api.messages.dailyCounts);
+  const contactDailyCounts = useQuery(api.messages.contactDailyCounts);
+  const msgSuccessRate = useQuery(api.messages.successRate);
+  const lastDisconnection = useQuery(api.instances.lastDisconnection);
+
   const campaignCount = campaigns?.length ?? 0;
   const activeCampaigns = campaigns?.filter(c => c.status === "running" || c.status === "paused").length ?? 0;
   const connected = (instanceCounts?.connected ?? 0) > 0;
 
-  // Mock sparkline data (in production, this would come from the API)
-  const contactSparkline = generateSparklineData(contactCount ? contactCount / 7 : 10);
-  const messageSparkline = generateSparklineData(messageCount ? messageCount / 7 : 50);
-  const campaignSparkline = generateSparklineData(campaignCount ? campaignCount / 7 : 2);
+  // Real sparkline data
+  const contactSparkline = contactDailyCounts ?? [0, 0, 0, 0, 0, 0, 0];
+  const messageSparkline = messageDailyCounts ?? [0, 0, 0, 0, 0, 0, 0];
+  // Campaign sparkline: use daily message counts scaled down as a proxy
+  const campaignSparkline = messageSparkline.map((v) => Math.round(v / 10));
+
+  // Compute real trend values
+  const contactTrend = contactsThisWeek !== undefined && contactCount
+    ? contactsThisWeek > 0 ? "up" as const : "neutral" as const
+    : "neutral" as const;
+  const contactTrendValue = contactsThisWeek !== undefined
+    ? `+${contactsThisWeek} this week`
+    : undefined;
+
+  const messageTrend = messagesToday !== undefined
+    ? messagesToday > 0 ? "up" as const : "neutral" as const
+    : "neutral" as const;
+  const messageTrendValue = messagesToday !== undefined
+    ? `+${messagesToday} today`
+    : undefined;
 
   return (
     <motion.div
@@ -58,14 +82,16 @@ export function DashboardPage() {
       </motion.div>
 
       {/* Stats grid */}
-      <motion.div 
+      <motion.div
         variants={staggerItemVariants}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        <ConnectionStatus 
-          connected={connected} 
+        <ConnectionStatus
+          connected={connected}
           href="/whatsapp"
-          sparklineData={connected ? [1, 1, 1, 0.8, 1, 1, 1] : [0.3, 0.2, 0.1, 0.2, 0.1, 0.2, 0.3]}
+          sparklineData={messageSparkline}
+          successRate={msgSuccessRate ?? 100}
+          lastDisconnectedAt={lastDisconnection}
         />
 
         <StatsCard
@@ -75,8 +101,8 @@ export function DashboardPage() {
           value={contactCount ?? "..."}
           subtitle={contactsThisWeek !== undefined ? `+${contactsThisWeek} this week` : undefined}
           subtitleColor="text-blue-400/70"
-          trend="up"
-          trendValue="12%"
+          trend={contactTrend}
+          trendValue={contactTrendValue}
           sparklineData={contactSparkline}
           sparklineColor="blue"
         />
@@ -88,8 +114,8 @@ export function DashboardPage() {
           value={messageCount ?? "..."}
           subtitle={messagesToday !== undefined ? `+${messagesToday} today` : undefined}
           subtitleColor="text-violet-400/70"
-          trend="up"
-          trendValue="8%"
+          trend={messageTrend}
+          trendValue={messageTrendValue}
           sparklineData={messageSparkline}
           sparklineColor="violet"
         />
@@ -109,7 +135,7 @@ export function DashboardPage() {
       </motion.div>
 
       {/* Bottom row */}
-      <motion.div 
+      <motion.div
         variants={staggerItemVariants}
         className="grid grid-cols-1 lg:grid-cols-3 gap-6"
       >
@@ -121,8 +147,8 @@ export function DashboardPage() {
         </div>
       </motion.div>
 
-      {/* Performance metrics (optional enhancement) */}
-      <motion.div 
+      {/* Performance metrics — real data */}
+      <motion.div
         variants={staggerItemVariants}
         className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6"
       >
@@ -132,23 +158,51 @@ export function DashboardPage() {
           </div>
           <div>
             <h3 className="text-h3 text-zinc-100">Quick Stats</h3>
-            <p className="text-small text-zinc-500">Performance overview for the last 7 days</p>
+            <p className="text-small text-zinc-500">Performance overview based on your message history</p>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: "Delivery Rate", value: "98.5%", change: "+2.1%", positive: true },
-            { label: "Avg. Response", value: "2.3h", change: "-15m", positive: true },
-            { label: "Open Rate", value: "87.2%", change: "+5.4%", positive: true },
-            { label: "Bounce Rate", value: "1.2%", change: "-0.3%", positive: true },
+            {
+              label: "Delivery Rate",
+              value: dashboardStats ? `${dashboardStats.deliveryRate}%` : "—",
+              subtitle: dashboardStats
+                ? `${dashboardStats.totalDelivered} of ${dashboardStats.totalSent}`
+                : undefined,
+            },
+            {
+              label: "Open Rate",
+              value: dashboardStats ? `${dashboardStats.openRate}%` : "—",
+              subtitle: dashboardStats
+                ? `${dashboardStats.totalRead} read`
+                : undefined,
+            },
+            {
+              label: "Avg. Response",
+              value: dashboardStats
+                ? formatResponseTime(dashboardStats.avgResponseMinutes)
+                : "—",
+              subtitle: dashboardStats
+                ? `${dashboardStats.totalIncoming} replies`
+                : undefined,
+            },
+            {
+              label: "Failure Rate",
+              value: dashboardStats ? `${dashboardStats.failureRate}%` : "—",
+              subtitle: dashboardStats
+                ? `${dashboardStats.totalFailed} failed`
+                : undefined,
+            },
           ].map((stat) => (
             <div key={stat.label} className="text-center p-4 bg-zinc-800/30 rounded-xl">
               <p className="text-xs text-zinc-500 mb-1">{stat.label}</p>
               <p className="text-xl font-bold text-zinc-100">{stat.value}</p>
-              <p className={`text-xs mt-1 ${stat.positive ? "text-emerald-400" : "text-red-400"}`}>
-                {stat.change}
-              </p>
+              {stat.subtitle && (
+                <p className="text-xs mt-1 text-zinc-500">
+                  {stat.subtitle}
+                </p>
+              )}
             </div>
           ))}
         </div>

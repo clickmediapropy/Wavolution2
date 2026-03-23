@@ -8,12 +8,14 @@ interface ConnectionStatusProps {
   connected: boolean;
   href?: string;
   sparklineData?: number[];
+  successRate?: number;
+  lastDisconnectedAt?: number | null;
 }
 
 function ConnectionSparkline({ data, connected }: { data: number[]; connected: boolean }) {
   const chartData = data.map((value, index) => ({ value, index }));
   const strokeColor = connected ? "#10b981" : "#ef4444";
-  
+
   return (
     <div className="h-10 w-20">
       <ResponsiveContainer width="100%" height="100%">
@@ -39,19 +41,49 @@ function ConnectionSparkline({ data, connected }: { data: number[]; connected: b
   );
 }
 
-export function ConnectionStatus({ connected, href, sparklineData }: ConnectionStatusProps) {
+function formatTimeAgo(timestamp: number): string {
+  const delta = Date.now() - timestamp;
+  const minutes = Math.floor(delta / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+export function ConnectionStatus({
+  connected,
+  href,
+  sparklineData,
+  successRate = 100,
+  lastDisconnectedAt,
+}: ConnectionStatusProps) {
   const [isReconnecting, setIsReconnecting] = useState(false);
 
   const handleReconnect = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsReconnecting(true);
-    // Simulate reconnect attempt
     setTimeout(() => setIsReconnecting(false), 2000);
   };
 
+  const healthColor =
+    successRate >= 90
+      ? "bg-emerald-500"
+      : successRate >= 70
+        ? "bg-amber-500"
+        : "bg-red-500";
+
+  const healthTextColor =
+    successRate >= 90
+      ? "text-emerald-400"
+      : successRate >= 70
+        ? "text-amber-400"
+        : "text-red-400";
+
   const card = (
-    <motion.div 
+    <motion.div
       whileHover={{ y: -4 }}
       className={`bg-zinc-900 border rounded-2xl p-5 transition-colors cursor-pointer group ${
         connected ? "border-zinc-800 hover:border-emerald-500/30" : "border-red-500/30 hover:border-red-500/50"
@@ -73,7 +105,7 @@ export function ConnectionStatus({ connected, href, sparklineData }: ConnectionS
             </div>
             <span className="text-sm text-zinc-500 font-medium">WhatsApp</span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {connected ? (
               <span className="relative flex h-2.5 w-2.5">
@@ -88,15 +120,13 @@ export function ConnectionStatus({ connected, href, sparklineData }: ConnectionS
             </span>
           </div>
 
-          {/* Status description */}
           <p className="text-xs text-zinc-500 mt-1">
-            {connected 
-              ? "Ready to send messages" 
+            {connected
+              ? "Ready to send messages"
               : "Click to connect your WhatsApp"
             }
           </p>
 
-          {/* Reconnect button for disconnected state */}
           {!connected && (
             <motion.button
               initial={{ opacity: 0, y: 10 }}
@@ -111,7 +141,6 @@ export function ConnectionStatus({ connected, href, sparklineData }: ConnectionS
           )}
         </div>
 
-        {/* Sparkline */}
         {sparklineData && (
           <div className="ml-2">
             <ConnectionSparkline data={sparklineData} connected={connected} />
@@ -119,26 +148,28 @@ export function ConnectionStatus({ connected, href, sparklineData }: ConnectionS
         )}
       </div>
 
-      {/* Connection health indicator */}
+      {/* Connection health indicator — real success rate */}
       {connected && (
         <div className="mt-3 pt-3 border-t border-zinc-800 flex items-center gap-2">
           <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
-            <motion.div 
+            <motion.div
               initial={{ width: 0 }}
-              animate={{ width: "95%" }}
+              animate={{ width: `${successRate}%` }}
               transition={{ duration: 1, delay: 0.5 }}
-              className="h-full bg-emerald-500 rounded-full"
+              className={`h-full ${healthColor} rounded-full`}
             />
           </div>
-          <span className="text-xs text-emerald-400 font-medium">95%</span>
+          <span className={`text-xs ${healthTextColor} font-medium`}>
+            {successRate}%
+          </span>
         </div>
       )}
 
-      {/* Error hint */}
-      {!connected && !isReconnecting && (
+      {/* Disconnection timestamp — real data */}
+      {!connected && !isReconnecting && lastDisconnectedAt && (
         <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-400/80">
           <AlertCircle className="w-3 h-3" />
-          <span>Connection lost 2 min ago</span>
+          <span>Connection lost {formatTimeAgo(lastDisconnectedAt)}</span>
         </div>
       )}
     </motion.div>

@@ -300,3 +300,49 @@ export const checkNumbers = action({
     return results;
   },
 });
+
+// Register webhook on Evolution API instance to send events to Convex
+export const registerWebhook = action({
+  args: { instanceName: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const baseUrl = getBaseUrl();
+    const apiKey = getGlobalApiKey();
+
+    // The Convex site URL for our webhook endpoint
+    const convexSiteUrl =
+      process.env.CONVEX_SITE_URL || process.env.VITE_CONVEX_SITE_URL;
+    if (!convexSiteUrl) {
+      throw new Error("CONVEX_SITE_URL not configured");
+    }
+    const webhookUrl = `${convexSiteUrl}/webhooks/evolution`;
+
+    const res = await fetch(`${baseUrl}/webhook/set/${args.instanceName}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: apiKey,
+      },
+      body: JSON.stringify({
+        url: webhookUrl,
+        webhook_by_events: false,
+        webhook_base64: false,
+        events: [
+          "MESSAGES_UPDATE",
+          "MESSAGES_UPSERT",
+          "CONNECTION_UPDATE",
+          "SEND_MESSAGE",
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Failed to register webhook: ${text}`);
+    }
+
+    return await res.json();
+  },
+});
