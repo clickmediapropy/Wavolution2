@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { usePaginatedQuery, useMutation, useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { api } from "@convex/_generated/api";
 import { Users, Plus, Upload, Search } from "lucide-react";
 import { toast } from "sonner";
 import { ContactTable } from "@/components/ContactTable";
