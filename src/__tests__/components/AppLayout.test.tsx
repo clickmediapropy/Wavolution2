@@ -127,7 +127,7 @@ describe("AppLayout", () => {
     expect(screen.queryByRole("link", { name: /contacts/i })).not.toBeInTheDocument();
   });
 
-  it("renders hamburger menu toggle button when authenticated", () => {
+  it("renders sidebar with nav items when authenticated", () => {
     mockUseConvexAuth.mockReturnValue({ isAuthenticated: true, isLoading: false });
 
     render(
@@ -138,12 +138,12 @@ describe("AppLayout", () => {
       </MemoryRouter>
     );
 
-    const toggleButton = screen.getByTestId("mobile-menu-toggle");
-    expect(toggleButton).toBeInTheDocument();
-    expect(toggleButton).toHaveAttribute("aria-label", "Toggle navigation menu");
+    // Sidebar should include nav items
+    expect(screen.getByRole("link", { name: /inbox/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /campaigns/i })).toBeInTheDocument();
   });
 
-  it("does not render hamburger menu toggle when not authenticated", () => {
+  it("does not render sidebar when not authenticated", () => {
     mockUseConvexAuth.mockReturnValue({ isAuthenticated: false, isLoading: false });
 
     render(
@@ -154,10 +154,12 @@ describe("AppLayout", () => {
       </MemoryRouter>
     );
 
-    expect(screen.queryByTestId("mobile-menu-toggle")).not.toBeInTheDocument();
+    // Should not have sidebar nav items
+    expect(screen.queryByRole("link", { name: /inbox/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /campaigns/i })).not.toBeInTheDocument();
   });
 
-  it("toggles mobile nav panel on hamburger click", () => {
+  it("renders Collapse button in sidebar when authenticated", () => {
     mockUseConvexAuth.mockReturnValue({ isAuthenticated: true, isLoading: false });
 
     render(
@@ -168,41 +170,7 @@ describe("AppLayout", () => {
       </MemoryRouter>
     );
 
-    // Mobile panel should not be visible initially
-    expect(screen.queryByTestId("mobile-nav-panel")).not.toBeInTheDocument();
-
-    // Click hamburger to open
-    fireEvent.click(screen.getByTestId("mobile-menu-toggle"));
-    expect(screen.getByTestId("mobile-nav-panel")).toBeInTheDocument();
-
-    // Click hamburger again to close
-    fireEvent.click(screen.getByTestId("mobile-menu-toggle"));
-    expect(screen.queryByTestId("mobile-nav-panel")).not.toBeInTheDocument();
-  });
-
-  it("closes mobile nav panel when a nav link is clicked", () => {
-    mockUseConvexAuth.mockReturnValue({ isAuthenticated: true, isLoading: false });
-
-    render(
-      <MemoryRouter>
-        <AppLayout>
-          <div>child</div>
-        </AppLayout>
-      </MemoryRouter>
-    );
-
-    // Open the mobile panel
-    fireEvent.click(screen.getByTestId("mobile-menu-toggle"));
-    expect(screen.getByTestId("mobile-nav-panel")).toBeInTheDocument();
-
-    // Click a nav link inside the mobile panel
-    const mobilePanel = screen.getByTestId("mobile-nav-panel");
-    const mobileLinks = mobilePanel.querySelectorAll("a");
-    expect(mobileLinks.length).toBeGreaterThan(0);
-    fireEvent.click(mobileLinks[0]!);
-
-    // Panel should close
-    expect(screen.queryByTestId("mobile-nav-panel")).not.toBeInTheDocument();
+    expect(screen.getByText("Collapse")).toBeInTheDocument();
   });
 
   it("renders Send nav link when authenticated", () => {

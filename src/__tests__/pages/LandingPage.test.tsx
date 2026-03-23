@@ -14,26 +14,26 @@ describe("LandingPage", () => {
     expect(screen.getByText(/at Scale/)).toBeInTheDocument();
   });
 
-  it("renders sign in CTA", () => {
+  it("renders Get Started CTA linking to register", () => {
     render(
       <MemoryRouter>
         <LandingPage />
       </MemoryRouter>,
     );
 
-    const signInLink = screen.getByText("Sign In");
-    expect(signInLink.closest("a")).toHaveAttribute("href", "/login");
+    const getStartedLink = screen.getByText("Get Started Free");
+    expect(getStartedLink.closest("a")).toHaveAttribute("href", "/register");
   });
 
-  it("renders create account link", () => {
+  it("renders Watch Demo link to login", () => {
     render(
       <MemoryRouter>
         <LandingPage />
       </MemoryRouter>,
     );
 
-    const createLink = screen.getByText("Create Account");
-    expect(createLink.closest("a")).toHaveAttribute("href", "/register");
+    const demoLink = screen.getByText("Watch Demo");
+    expect(demoLink.closest("a")).toHaveAttribute("href", "/login");
   });
 
   it("renders value propositions", () => {

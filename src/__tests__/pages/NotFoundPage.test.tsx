@@ -24,18 +24,18 @@ describe("NotFoundPage", () => {
     );
 
     expect(
-      screen.getByText(/this page doesn't exist/i),
+      screen.getByText(/page not found/i),
     ).toBeInTheDocument();
   });
 
-  it("renders Go Home link", () => {
+  it("renders Go to Dashboard link", () => {
     render(
       <MemoryRouter>
         <NotFoundPage />
       </MemoryRouter>,
     );
 
-    const link = screen.getByText("Go Home");
-    expect(link.closest("a")).toHaveAttribute("href", "/");
+    const link = screen.getByText("Go to Dashboard");
+    expect(link.closest("a")).toHaveAttribute("href", "/dashboard");
   });
 });
