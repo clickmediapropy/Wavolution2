@@ -1,3 +1,48 @@
+import { ConvexReactClient } from "convex/react";
+import { ConvexAuthProvider } from "@convex-dev/auth/react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AppLayout } from "./components/AppLayout";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AnonymousRoute } from "./components/AnonymousRoute";
+import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
+import { DashboardPage } from "./pages/DashboardPage";
+
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+
 export default function App() {
-  return <div>Message Hub</div>;
+  return (
+    <ConvexAuthProvider client={convex}>
+      <BrowserRouter>
+        <AppLayout>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <AnonymousRoute>
+                  <LoginPage />
+                </AnonymousRoute>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <AnonymousRoute>
+                  <RegisterPage />
+                </AnonymousRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AppLayout>
+      </BrowserRouter>
+    </ConvexAuthProvider>
+  );
 }

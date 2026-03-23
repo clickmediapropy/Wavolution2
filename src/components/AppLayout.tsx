@@ -1,9 +1,14 @@
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { MessageSquare } from "lucide-react";
+import { useConvexAuth } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { MessageSquare, LogOut } from "lucide-react";
 import { Toaster } from "sonner";
 
 export function AppLayout({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useConvexAuth();
+  const { signOut } = useAuthActions();
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-200">
@@ -18,6 +23,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </div>
               <span>Message Hub</span>
             </Link>
+
+            {isAuthenticated && (
+              <button
+                onClick={() => void signOut()}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600 transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
+            )}
           </div>
         </div>
       </nav>
