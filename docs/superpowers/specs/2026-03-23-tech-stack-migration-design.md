@@ -108,6 +108,8 @@ Indexes: `by_username` on `["username"]`
 
 Indexes: `by_user` on `["userId"]`, `by_user_phone` on `["userId", "phone"]`
 
+Search index: `search_contacts` on `name` and `phone` fields (for contact search functionality). Convex full-text search replaces SQL `LIKE` queries.
+
 ### `messages` table
 
 | Field | Type | Notes |
@@ -125,6 +127,8 @@ Indexes: `by_user` on `["userId"]`
 |-------|------|-------|
 | `userId` | `Id<"users">` | Foreign key |
 | `status` | `string` | `"pending"` / `"running"` / `"completed"` / `"stopped"` |
+| `recipientType` | `string` | `"all"` / `"pending"` / `"selected"` — how contacts were chosen |
+| `selectedContactIds` | `Id<"contacts">[]` (optional) | Only present when `recipientType === "selected"` |
 | `total` | `number` | Total contacts |
 | `processed` | `number` | Processed so far |
 | `sent` | `number` | Successfully sent |
@@ -132,8 +136,19 @@ Indexes: `by_user` on `["userId"]`
 | `delay` | `number` | Seconds between messages |
 | `messageTemplate` | `string` | Template with `{name}`, `{phone}` placeholders |
 | `hasMedia` | `boolean` | |
+| `mediaStorageIds` | `Id<"_storage">[]` (optional) | Convex file storage IDs for campaign media |
 
 Indexes: `by_user` on `["userId"]`
+
+### Media Storage
+
+Campaign media files are stored using **Convex file storage**. Flow:
+1. React uploads media via `storage.generateUploadUrl()` → returns `Id<"_storage">`
+2. Storage IDs saved on the campaign document in `mediaStorageIds`
+3. VPS worker retrieves media via `storage.getUrl(storageId)` → downloads file → converts to base64 → sends via Evolution API
+4. After campaign completes, media files can be cleaned up from Convex storage
+
+This handles the gap between upload time and campaign processing (which may be hours later). Convex file storage supports files up to 256MB, well above the 50MB video limit.
 
 ### `sessions` table
 
@@ -185,11 +200,15 @@ Indexes: `by_token` on `["token"]`
 | `FlashMessage` | Toast notifications (shadcn `Sonner`) |
 
 ### Auth Flow
-1. `LoginPage` calls Convex mutation `login({ username, password })` → returns session token
-2. Token stored in localStorage, sent with every Convex request
-3. `ProtectedRoute` checks auth state via `useQuery` — if no valid session, redirects to `/`
-4. `WhatsAppGuard` checks user's `instanceCreated` and `whatsappConnected` fields
-5. Logout clears token and deletes session from Convex
+
+Session-based custom auth. Convex doesn't have HTTP headers on WebSocket calls, so the session token is passed as an argument to every Convex function.
+
+1. `LoginPage` calls Convex mutation `login({ username, password })` → validates credentials, creates session document, returns `{ token, userId }`
+2. Token stored in `localStorage`. A React context provider (`AuthProvider`) reads the token and passes it to all Convex calls.
+3. Every Convex query/mutation that requires auth takes a `sessionToken: string` parameter. A shared `getAuthenticatedUser(ctx, sessionToken)` helper validates the token against the `sessions` table and returns the user document (or throws).
+4. `ProtectedRoute` calls `useQuery(api.auth.me, { sessionToken })` — if it returns null or throws, redirects to `/`.
+5. `WhatsAppGuard` checks the authenticated user's `instanceCreated` and `whatsappConnected` fields.
+6. Logout calls Convex mutation `logout({ sessionToken })` → deletes session document. React clears localStorage.
 
 ### Styling
 - **Tailwind CSS** installed via PostCSS (not CDN)
@@ -227,22 +246,29 @@ Node.js/TypeScript Express server running as a Docker container on the VPS along
 
 ```
 1. Convex action → POST /campaigns/start { campaignId }
-2. Worker reads campaign + contacts from Convex via Node.js client
-3. For each contact:
-   a. Personalize message template ({name}, {phone})
-   b. POST to Evolution API at localhost:8080/message/sendText/{instance}
-   c. If media: POST to localhost:8080/message/sendMedia/{instance}
-   d. Write message record to Convex via mutation
-   e. Update campaign progress in Convex (processed++, sent++ or failed++)
-   f. Sleep for configured delay (default 2 seconds)
-4. On completion: update campaign status to "completed" in Convex
-5. If stopped: exit loop, update campaign status to "stopped"
+2. Worker reads campaign from Convex (includes recipientType, selectedContactIds, mediaStorageIds)
+3. Worker resolves contacts:
+   - recipientType "all" → query all contacts for user
+   - recipientType "pending" → query contacts not in messages table
+   - recipientType "selected" → query contacts by selectedContactIds
+4. If campaign has media: download files from Convex storage URLs → convert to base64
+5. For each contact:
+   a. Check campaign status in Convex (if "stopped", exit loop)
+   b. Personalize message template ({name}, {phone})
+   c. POST to Evolution API /message/sendText/{instance}
+   d. If media: POST to Evolution API /message/sendMedia/{instance}
+   e. Write message record to Convex via mutation
+   f. Update campaign progress in Convex (processed++, sent++ or failed++)
+   g. Sleep for configured delay (default 2 seconds)
+6. On completion: update campaign status to "completed" in Convex
+7. On crash recovery: worker checks messages table to skip already-sent contacts
 ```
 
 ### Deployment
 - Docker container added to existing `docker-compose.yml` on VPS
-- Shares network with Evolution API container (access via `localhost:8080` or container name)
-- Environment variables: `CONVEX_URL`, `CONVEX_DEPLOY_KEY`, `VPS_API_SECRET`, `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`
+- Shares Docker Compose network with Evolution API container — access via Docker service name (e.g., `http://evolution-api:8080`), not `localhost` (unless using `network_mode: host`)
+- `EVOLUTION_API_URL` env var handles the correct address regardless of networking mode
+- Environment variables: `CONVEX_URL`, `CONVEX_DEPLOY_KEY`, `VPS_API_SECRET`, `EVOLUTION_API_URL` (e.g., `http://evolution-api:8080`), `EVOLUTION_API_KEY`
 
 ---
 
@@ -250,9 +276,9 @@ Node.js/TypeScript Express server running as a Docker container on the VPS along
 
 Every feature from the Flask app must be present in the new stack:
 
-- [ ] User registration (username/password → create Evolution instance)
-- [ ] User login/logout (session-based)
-- [ ] WhatsApp setup (create Evolution API instance)
+- [ ] User registration (username/password only — does NOT create Evolution instance)
+- [ ] User login/logout (session-based, token in localStorage)
+- [ ] WhatsApp setup (create Evolution API instance — separate step at `/setup` after registration)
 - [ ] WhatsApp connection (QR code display + status polling)
 - [ ] Dashboard (stats: total contacts, messages sent, today's messages, connection status)
 - [ ] Contact list (paginated, searchable, with sent/pending status)
@@ -320,7 +346,9 @@ wavolution2/
 │   └── index.css                 # Tailwind imports
 ├── convex/                       # Convex backend
 │   ├── schema.ts                 # Table definitions
-│   ├── auth.ts                   # Login/register/logout mutations
+│   ├── auth.ts                   # Login/register/logout mutations + me query
+│   ├── lib/
+│   │   └── auth.ts               # getAuthenticatedUser(ctx, sessionToken) helper
 │   ├── users.ts                  # User queries and mutations
 │   ├── contacts.ts               # Contact CRUD queries/mutations
 │   ├── campaigns.ts              # Campaign queries/mutations
