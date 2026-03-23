@@ -187,6 +187,175 @@ export const exportAll = query({
   },
 });
 
+// --- CRM Functions ---
+
+// Add a tag to a contact
+export const addTag = mutation({
+  args: {
+    contactId: v.id("contacts"),
+    tag: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthedUserId(ctx);
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact || contact.userId !== userId) {
+      throw new Error("Contact not found");
+    }
+
+    const tag = args.tag.trim();
+    if (!tag) {
+      throw new Error("Tag is required");
+    }
+
+    const currentTags = contact.tags || [];
+    if (currentTags.includes(tag)) {
+      return; // already has this tag
+    }
+
+    await ctx.db.patch(args.contactId, {
+      tags: [...currentTags, tag],
+    });
+  },
+});
+
+// Remove a tag from a contact
+export const removeTag = mutation({
+  args: {
+    contactId: v.id("contacts"),
+    tag: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthedUserId(ctx);
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact || contact.userId !== userId) {
+      throw new Error("Contact not found");
+    }
+
+    const currentTags = contact.tags || [];
+    const filtered = currentTags.filter((t) => t !== args.tag);
+    await ctx.db.patch(args.contactId, { tags: filtered });
+  },
+});
+
+// Set a custom field on a contact
+export const setCustomField = mutation({
+  args: {
+    contactId: v.id("contacts"),
+    key: v.string(),
+    value: v.union(v.string(), v.number(), v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthedUserId(ctx);
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact || contact.userId !== userId) {
+      throw new Error("Contact not found");
+    }
+
+    const key = args.key.trim();
+    if (!key) {
+      throw new Error("Field key is required");
+    }
+
+    const currentFields = contact.customFields || {};
+    await ctx.db.patch(args.contactId, {
+      customFields: { ...currentFields, [key]: args.value },
+    });
+  },
+});
+
+// Remove a custom field from a contact
+export const removeCustomField = mutation({
+  args: {
+    contactId: v.id("contacts"),
+    key: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthedUserId(ctx);
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact || contact.userId !== userId) {
+      throw new Error("Contact not found");
+    }
+
+    const currentFields = contact.customFields || {};
+    const { [args.key]: _, ...rest } = currentFields;
+    await ctx.db.patch(args.contactId, {
+      customFields: Object.keys(rest).length > 0 ? rest : undefined,
+    });
+  },
+});
+
+// Get detailed contact info including conversation and recent messages
+export const getDetail = query({
+  args: { contactId: v.id("contacts") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthedUserId(ctx);
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact || contact.userId !== userId) {
+      return null;
+    }
+
+    // Get the conversation for this contact
+    const conversation = await ctx.db
+      .query("conversations")
+      .withIndex("by_userId_and_phone", (q) =>
+        q.eq("userId", userId).eq("phone", contact.phone),
+      )
+      .unique();
+
+    // Get recent messages for this contact
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_userId_and_phone", (q) =>
+        q.eq("userId", userId).eq("phone", contact.phone),
+      )
+      .order("desc")
+      .take(50);
+
+    // Get pipeline stage info if assigned
+    let pipelineStage = null;
+    if (contact.pipelineStageId) {
+      pipelineStage = await ctx.db.get(contact.pipelineStageId);
+    }
+
+    return {
+      contact,
+      conversation,
+      messages,
+      pipelineStage,
+    };
+  },
+});
+
+// List contacts filtered by tag
+export const listByTag = query({
+  args: { tag: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthedUserId(ctx);
+    // No tag-specific index, so filter in memory after index scan
+    const contacts = await ctx.db
+      .query("contacts")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .take(1000);
+    return contacts.filter(
+      (c) => c.tags && c.tags.includes(args.tag),
+    );
+  },
+});
+
+// List contacts filtered by pipeline stage
+export const listByStage = query({
+  args: { stageId: v.id("pipelineStages") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthedUserId(ctx);
+    return await ctx.db
+      .query("contacts")
+      .withIndex("by_userId_and_pipelineStageId", (q) =>
+        q.eq("userId", userId).eq("pipelineStageId", args.stageId),
+      )
+      .take(500);
+  },
+});
+
 // Import a batch of contacts from CSV (max 100 per call)
 export const importBatch = mutation({
   args: {

@@ -62,6 +62,9 @@ const schema = defineSchema({
     lastMessageText: v.optional(v.string()), // preview text for inbox list
     lastMessageDirection: v.optional(v.string()), // inbound | outbound
     contactName: v.optional(v.string()), // denormalized from contact
+    contactTypingAt: v.optional(v.number()), // timestamp when contact started typing
+    assignedTo: v.optional(v.string()), // label string for conversation assignment
+    typingAt: v.optional(v.number()), // timestamp when agent started typing (UI indicator)
   })
     .index("by_userId", ["userId"])
     .index("by_userId_and_phone", ["userId", "phone"])
@@ -87,9 +90,18 @@ const schema = defineSchema({
     repliedAt: v.optional(v.number()), // when the contact first replied
     lastMessageAt: v.optional(v.number()), // last message from contact
     engagementScore: v.optional(v.number()), // 0-100, computed from interactions
+    // Pipeline / CRM fields
+    pipelineStageId: v.optional(v.id("pipelineStages")),
+    stageEnteredAt: v.optional(v.number()), // timestamp when moved to current stage
+    customFields: v.optional(
+      v.record(v.string(), v.union(v.string(), v.number(), v.boolean())),
+    ),
+    aiSummary: v.optional(v.string()), // AI-generated contact summary
+    aiSummaryGeneratedAt: v.optional(v.number()),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_and_phone", ["userId", "phone"])
+    .index("by_userId_and_pipelineStageId", ["userId", "pipelineStageId"])
     .searchIndex("search_by_firstName", {
       searchField: "firstName",
       filterFields: ["userId"],
@@ -108,6 +120,9 @@ const schema = defineSchema({
     readAt: v.optional(v.number()), // timestamp when READ received
     direction: v.optional(v.string()), // outgoing | incoming
     sentBy: v.optional(v.string()), // human | bot | contact | campaign
+    isNote: v.optional(v.boolean()), // true for internal notes (not sent via WhatsApp)
+    mediaStorageId: v.optional(v.id("_storage")), // Convex file storage ID for media
+    mediaType: v.optional(v.string()), // image | video | audio | document
   })
     .index("by_userId", ["userId"])
     .index("by_campaignId", ["campaignId"])
@@ -140,6 +155,62 @@ const schema = defineSchema({
     startedAt: v.optional(v.number()),
     completedAt: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
+
+  // --- NEW TABLES ---
+
+  // Pipeline stages for kanban CRM view
+  pipelineStages: defineTable({
+    userId: v.id("users"),
+    name: v.string(), // stage label (e.g. "New Lead", "Qualified", "Won")
+    color: v.optional(v.string()), // hex color for UI (default #6b7280)
+    position: v.number(), // ordering index for drag-and-drop
+  }).index("by_userId", ["userId"]),
+
+  // Quick reply templates for fast inbox responses
+  quickReplies: defineTable({
+    userId: v.id("users"),
+    shortcut: v.string(), // slash-command style trigger (e.g. "/thanks")
+    text: v.string(), // full message text to insert
+    category: v.optional(v.string()), // optional grouping label
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_shortcut", ["userId", "shortcut"])
+    .searchIndex("search_by_text", {
+      searchField: "text",
+      filterFields: ["userId"],
+    }),
+
+  // Knowledge base entries for RAG context injection into bot responses
+  knowledgeBaseEntries: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    content: v.string(), // full text content
+    category: v.optional(v.string()),
+    wordCount: v.optional(v.number()), // computed on insert/update
+  }).index("by_userId", ["userId"]),
+
+  // Bot goals — structured conversation flow templates
+  botGoals: defineTable({
+    userId: v.id("users"),
+    name: v.string(), // goal label
+    triggerKeywords: v.array(v.string()), // keywords that activate this goal
+    steps: v.array(
+      v.object({
+        message: v.string(),
+        delayMs: v.optional(v.number()),
+      }),
+    ),
+    isActive: v.boolean(), // whether this goal is currently enabled
+    position: v.number(), // ordering index
+  }).index("by_userId", ["userId"]),
+
+  // Internal notes on conversations (not sent via WhatsApp)
+  conversationNotes: defineTable({
+    conversationId: v.id("conversations"),
+    userId: v.id("users"),
+    text: v.string(),
+    createdAt: v.number(),
+  }).index("by_conversationId", ["conversationId"]),
 });
 
 export default schema;

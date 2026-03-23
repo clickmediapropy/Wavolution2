@@ -12,7 +12,9 @@ import {
   Megaphone,
   Send,
   Smartphone,
+  Bot,
   Inbox,
+  Kanban,
   Menu,
   X,
   ChevronLeft,
@@ -25,8 +27,10 @@ const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/inbox", label: "Inbox", icon: Inbox },
   { to: "/contacts", label: "Contacts", icon: Users },
+  { to: "/pipeline", label: "Pipeline", icon: Kanban },
   { to: "/campaigns", label: "Campaigns", icon: Megaphone },
   { to: "/send", label: "Send Message", icon: Send },
+  { to: "/bots", label: "Bots", icon: Bot },
   { to: "/whatsapp", label: "WhatsApp", icon: Smartphone },
 ] as const;
 

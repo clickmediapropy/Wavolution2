@@ -17,6 +17,9 @@ import { BulkCampaignPage } from "./pages/BulkCampaignPage";
 import { CampaignStatusPage } from "./pages/CampaignStatusPage";
 import { CampaignHistoryPage } from "./pages/CampaignHistoryPage";
 import { InboxPage } from "./pages/InboxPage";
+import { BotConfigPage } from "./pages/BotConfigPage";
+import { PipelinePage } from "./pages/PipelinePage";
+import { ContactDetailPage } from "./pages/ContactDetailPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { WhatsAppGuard } from "./components/WhatsAppGuard";
 
@@ -134,6 +137,30 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <CampaignStatusPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/pipeline"
+                element={
+                  <ProtectedRoute>
+                    <PipelinePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/contacts/:id"
+                element={
+                  <ProtectedRoute>
+                    <ContactDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/bots"
+                element={
+                  <ProtectedRoute>
+                    <BotConfigPage />
                   </ProtectedRoute>
                 }
               />

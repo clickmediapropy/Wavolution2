@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 function ThrowingChild({ shouldThrow }: { shouldThrow: boolean }) {
@@ -19,9 +20,11 @@ describe("ErrorBoundary", () => {
 
   it("renders children when no error", () => {
     render(
-      <ErrorBoundary>
-        <ThrowingChild shouldThrow={false} />
-      </ErrorBoundary>,
+      <MemoryRouter>
+        <ErrorBoundary>
+          <ThrowingChild shouldThrow={false} />
+        </ErrorBoundary>
+      </MemoryRouter>,
     );
 
     expect(screen.getByText("Child rendered")).toBeInTheDocument();
@@ -29,20 +32,26 @@ describe("ErrorBoundary", () => {
 
   it("renders error UI when child throws", () => {
     render(
-      <ErrorBoundary>
-        <ThrowingChild shouldThrow={true} />
-      </ErrorBoundary>,
+      <MemoryRouter>
+        <ErrorBoundary>
+          <ThrowingChild shouldThrow={true} />
+        </ErrorBoundary>
+      </MemoryRouter>,
     );
 
-    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-    expect(screen.getByText("Test error")).toBeInTheDocument();
+    expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
+    // Error details are in a collapsible section — click to expand
+    fireEvent.click(screen.getByText(/error details/i));
+    expect(screen.getByText(/Test error/)).toBeInTheDocument();
   });
 
   it("renders retry button", () => {
     render(
-      <ErrorBoundary>
-        <ThrowingChild shouldThrow={true} />
-      </ErrorBoundary>,
+      <MemoryRouter>
+        <ErrorBoundary>
+          <ThrowingChild shouldThrow={true} />
+        </ErrorBoundary>
+      </MemoryRouter>,
     );
 
     expect(

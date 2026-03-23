@@ -156,6 +156,30 @@ export const updateState = mutation({
   },
 });
 
+// Update bot settings for an instance
+export const updateBotSettings = mutation({
+  args: {
+    id: v.id("instances"),
+    botEnabled: v.optional(v.boolean()),
+    botSystemPrompt: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthedUserId(ctx);
+    const instance = await ctx.db.get(args.id);
+    if (!instance || instance.userId !== userId) {
+      throw new Error("Instance not found");
+    }
+
+    const patch: Record<string, unknown> = {};
+    if (args.botEnabled !== undefined) patch.botEnabled = args.botEnabled;
+    if (args.botSystemPrompt !== undefined) patch.botSystemPrompt = args.botSystemPrompt;
+
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(args.id, patch);
+    }
+  },
+});
+
 // Remove an instance record
 export const remove = mutation({
   args: { id: v.id("instances") },

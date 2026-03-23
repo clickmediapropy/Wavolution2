@@ -3,13 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { LoginPage } from "@/pages/LoginPage";
 
-// Mock framer-motion
-vi.mock("framer-motion", () => ({
-  motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-  },
-}));
-
 // Mock auth hooks
 const mockSignIn = vi.fn();
 vi.mock("@convex-dev/auth/react", () => ({
@@ -90,7 +83,7 @@ describe("LoginPage", () => {
     });
   });
 
-  it("toggles password visibility", () => {
+  it("toggles password visibility", async () => {
     render(
       <MemoryRouter>
         <LoginPage />
@@ -103,11 +96,15 @@ describe("LoginPage", () => {
     const toggleButton = screen.getByRole("button", { name: /show password/i });
     fireEvent.click(toggleButton);
 
-    expect(passwordInput).toHaveAttribute("type", "text");
+    await waitFor(() => {
+      expect(passwordInput).toHaveAttribute("type", "text");
+    });
     expect(screen.getByRole("button", { name: /hide password/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /hide password/i }));
-    expect(passwordInput).toHaveAttribute("type", "password");
+    await waitFor(() => {
+      expect(passwordInput).toHaveAttribute("type", "password");
+    });
   });
 
   it("has link to register page", () => {

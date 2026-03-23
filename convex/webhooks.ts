@@ -87,6 +87,41 @@ export const handleEvolutionWebhook = httpAction(async (ctx, req) => {
         break;
       }
 
+      case "presence.update": {
+        // Typing indicator from contact
+        const participant = (data.id as string) || "";
+        const presences = data.presences as
+          | Array<Record<string, unknown>>
+          | undefined;
+        const isTyping =
+          presences?.some((p) => p.status === "composing") ?? false;
+
+        if (participant && !participant.includes("@g.us")) {
+          const rawPhone = participant.replace("@s.whatsapp.net", "");
+          const phone = rawPhone.startsWith("+") ? rawPhone : `+${rawPhone}`;
+
+          const instance = await ctx.runQuery(
+            internal.webhooks.getInstanceByName,
+            { name: instanceName },
+          );
+
+          if (instance) {
+            const conversation = await ctx.runQuery(
+              internal.webhooks.getConversationByPhone,
+              { userId: instance.userId, phone },
+            );
+
+            if (conversation) {
+              await ctx.runMutation(internal.conversations.updateTyping, {
+                conversationId: conversation._id,
+                typing: isTyping,
+              });
+            }
+          }
+        }
+        break;
+      }
+
       case "connection.update": {
         const state = (data.state as string) || "unknown";
         const instance = await ctx.runQuery(
@@ -117,6 +152,21 @@ export const getInstanceByName = internalQuery({
     return await ctx.db
       .query("instances")
       .withIndex("by_name", (q) => q.eq("name", args.name))
+      .first();
+  },
+});
+
+export const getConversationByPhone = internalQuery({
+  args: {
+    userId: v.id("users"),
+    phone: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("conversations")
+      .withIndex("by_userId_and_phone", (q) =>
+        q.eq("userId", args.userId).eq("phone", args.phone),
+      )
       .first();
   },
 });

@@ -3,45 +3,57 @@ import { describe, it, expect, vi } from "vitest";
 import { DelayConfig } from "@/components/DelayConfig";
 
 describe("DelayConfig", () => {
-  it("renders slider and numeric input", () => {
+  it("renders label and preset buttons", () => {
     render(<DelayConfig value={5} onChange={vi.fn()} />);
 
-    expect(
-      screen.getByLabelText("Message delay in seconds"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Delay Between Messages")).toBeInTheDocument();
+    expect(screen.getByText("Fast")).toBeInTheDocument();
+    expect(screen.getByText("Normal")).toBeInTheDocument();
+    expect(screen.getByText("Slow")).toBeInTheDocument();
+    expect(screen.getByText("Custom")).toBeInTheDocument();
+  });
+
+  it("displays current delay value badge", () => {
+    render(<DelayConfig value={10} onChange={vi.fn()} />);
+
+    expect(screen.getByText("10s")).toBeInTheDocument();
+  });
+
+  it("calls onChange when a preset button is clicked", () => {
+    const onChange = vi.fn();
+    render(<DelayConfig value={5} onChange={onChange} />);
+
+    fireEvent.click(screen.getByText("Slow"));
+    expect(onChange).toHaveBeenCalledWith(10);
+  });
+
+  it("calls onChange when Fast preset is clicked", () => {
+    const onChange = vi.fn();
+    render(<DelayConfig value={5} onChange={onChange} />);
+
+    fireEvent.click(screen.getByText("Fast"));
+    expect(onChange).toHaveBeenCalledWith(1);
+  });
+
+  it("shows info text with current value", () => {
+    render(<DelayConfig value={5} onChange={vi.fn()} />);
+
+    expect(screen.getByText(/5 second/)).toBeInTheDocument();
+    expect(screen.getByText(/delay between each/)).toBeInTheDocument();
+  });
+
+  it("shows custom slider when custom mode is selected", () => {
+    // value=7 is not a preset, so custom mode is auto-selected
+    render(<DelayConfig value={7} onChange={vi.fn()} />);
+
+    expect(screen.getByLabelText("Message delay in seconds")).toBeInTheDocument();
     expect(screen.getByLabelText("Delay seconds")).toBeInTheDocument();
   });
 
-  it("displays current delay value", () => {
-    render(<DelayConfig value={10} onChange={vi.fn()} />);
-
-    const numInput = screen.getByLabelText("Delay seconds") as HTMLInputElement;
-    expect(numInput.value).toBe("10");
-  });
-
-  it("calls onChange when slider changes", () => {
+  it("clamps value to min/max bounds in custom mode", () => {
     const onChange = vi.fn();
-    render(<DelayConfig value={5} onChange={onChange} />);
-
-    fireEvent.change(screen.getByLabelText("Message delay in seconds"), {
-      target: { value: "15" },
-    });
-    expect(onChange).toHaveBeenCalledWith(15);
-  });
-
-  it("calls onChange when numeric input changes", () => {
-    const onChange = vi.fn();
-    render(<DelayConfig value={5} onChange={onChange} />);
-
-    fireEvent.change(screen.getByLabelText("Delay seconds"), {
-      target: { value: "20" },
-    });
-    expect(onChange).toHaveBeenCalledWith(20);
-  });
-
-  it("clamps value to min/max bounds", () => {
-    const onChange = vi.fn();
-    render(<DelayConfig value={5} onChange={onChange} />);
+    // value=7 activates custom mode
+    render(<DelayConfig value={7} onChange={onChange} />);
 
     fireEvent.change(screen.getByLabelText("Delay seconds"), {
       target: { value: "100" },
@@ -52,17 +64,5 @@ describe("DelayConfig", () => {
       target: { value: "0" },
     });
     expect(onChange).toHaveBeenCalledWith(1); // MIN_DELAY
-  });
-
-  it("shows descriptive text with current value", () => {
-    render(<DelayConfig value={5} onChange={vi.fn()} />);
-
-    expect(screen.getByText(/wait 5 seconds/i)).toBeInTheDocument();
-  });
-
-  it("handles singular 'second' for value of 1", () => {
-    render(<DelayConfig value={1} onChange={vi.fn()} />);
-
-    expect(screen.getByText(/wait 1 second between/i)).toBeInTheDocument();
   });
 });

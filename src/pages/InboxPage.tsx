@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -15,6 +15,14 @@ import {
   Mail,
   Sparkles,
   ArrowLeft,
+  StickyNote,
+  Zap,
+  Image as ImageIcon,
+  FileText,
+  Film,
+  X,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Id } from "@convex/_generated/dataModel";
@@ -30,9 +38,90 @@ function formatTimeAgo(timestamp: number): string {
   return `${days}d`;
 }
 
+function isTypingRecently(typingAt: number | undefined): boolean {
+  if (!typingAt) return false;
+  return Date.now() - typingAt < 30_000;
+}
+
+function TypingDots() {
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0ms]" />
+      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:150ms]" />
+      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:300ms]" />
+    </span>
+  );
+}
+
+function MediaPreview({
+  mediaStorageId,
+  mediaType,
+}: {
+  mediaStorageId: Id<"_storage">;
+  mediaType: string | undefined;
+}) {
+  const url = useQuery(api.storage.getFileUrl, { storageId: mediaStorageId });
+  const [enlarged, setEnlarged] = useState(false);
+
+  if (!url) return null;
+
+  if (mediaType === "image") {
+    return (
+      <>
+        <img
+          src={url}
+          alt="Shared image"
+          className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity mb-1"
+          style={{ maxHeight: 200 }}
+          onClick={() => setEnlarged(true)}
+        />
+        {enlarged && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-pointer"
+            onClick={() => setEnlarged(false)}
+          >
+            <img
+              src={url}
+              alt="Enlarged image"
+              className="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl"
+            />
+          </div>
+        )}
+      </>
+    );
+  }
+
+  if (mediaType === "video") {
+    return (
+      <video
+        src={url}
+        controls
+        className="max-w-full rounded-lg mb-1"
+        style={{ maxHeight: 200 }}
+      />
+    );
+  }
+
+  // Document / audio / other
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 px-3 py-2 bg-zinc-700/50 rounded-lg hover:bg-zinc-700 transition-colors mb-1"
+    >
+      <FileText className="w-4 h-4 flex-shrink-0" />
+      <span className="text-xs truncate">
+        {mediaType === "audio" ? "Audio file" : "Document"}
+      </span>
+    </a>
+  );
+}
+
 export function InboxPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const conversations = useQuery(api.conversations.list, { archived: false });
   const selectedConversation = useQuery(
@@ -47,11 +136,15 @@ export function InboxPage() {
       ? { conversationId: conversationId as Id<"conversations"> }
       : "skip",
   );
+  const quickReplies = useQuery(api.quickReplies.list);
 
   const sendMessage = useMutation(api.conversations.sendMessage);
+  const addNote = useMutation(api.conversations.addNote);
   const markRead = useMutation(api.conversations.markRead);
   const markUnread = useMutation(api.conversations.markUnread);
   const archiveConv = useMutation(api.conversations.archive);
+  const bulkArchive = useMutation(api.conversations.bulkArchive);
+  const bulkMarkRead = useMutation(api.conversations.bulkMarkRead);
   const toggleMode = useMutation(api.conversations.toggleMode);
 
   const generateDraft = useAction(api.ai.generateMessageDraft);
@@ -62,6 +155,35 @@ export function InboxPage() {
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiIntent, setAiIntent] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isNoteMode, setIsNoteMode] = useState(false);
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [selectedConvIds, setSelectedConvIds] = useState<Set<string>>(
+    new Set(),
+  );
+
+  const quickReplyRef = useRef<HTMLDivElement>(null);
+
+  // Close quick reply popover on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        quickReplyRef.current &&
+        !quickReplyRef.current.contains(e.target as Node)
+      ) {
+        setShowQuickReplies(false);
+      }
+    }
+    if (showQuickReplies) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showQuickReplies]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   // Filter conversations by search
   const filteredConversations = conversations?.filter((c) => {
@@ -74,6 +196,8 @@ export function InboxPage() {
     );
   });
 
+  const hasSelection = selectedConvIds.size > 0;
+
   // Auto-mark as read when selecting a conversation
   const handleSelectConversation = async (id: string) => {
     navigate(`/inbox/${id}`);
@@ -83,18 +207,39 @@ export function InboxPage() {
     }
   };
 
+  const handleToggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedConvIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
   const handleSend = async () => {
     if (!conversationId || !messageInput.trim()) return;
     setIsSending(true);
     try {
-      await sendMessage({
-        conversationId: conversationId as Id<"conversations">,
-        message: messageInput.trim(),
-      });
+      if (isNoteMode) {
+        await addNote({
+          conversationId: conversationId as Id<"conversations">,
+          noteText: messageInput.trim(),
+        });
+        toast.success("Note added");
+      } else {
+        await sendMessage({
+          conversationId: conversationId as Id<"conversations">,
+          message: messageInput.trim(),
+        });
+      }
       setMessageInput("");
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to send message",
+        err instanceof Error ? err.message : "Failed to send",
       );
     } finally {
       setIsSending(false);
@@ -105,6 +250,32 @@ export function InboxPage() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    const ids = Array.from(selectedConvIds) as Id<"conversations">[];
+    try {
+      const result = await bulkArchive({ conversationIds: ids });
+      toast.success(`${result.archived} conversation(s) archived`);
+      setSelectedConvIds(new Set());
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Bulk archive failed",
+      );
+    }
+  };
+
+  const handleBulkMarkRead = async () => {
+    const ids = Array.from(selectedConvIds) as Id<"conversations">[];
+    try {
+      const result = await bulkMarkRead({ conversationIds: ids });
+      toast.success(`${result.marked} conversation(s) marked as read`);
+      setSelectedConvIds(new Set());
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Bulk mark read failed",
+      );
     }
   };
 
@@ -155,52 +326,72 @@ export function InboxPage() {
                 <p className="text-sm">No conversations</p>
               </div>
             ) : (
-              filteredConversations?.map((conv) => (
-                <button
-                  key={conv._id}
-                  onClick={() => handleSelectConversation(conv._id)}
-                  className={`w-full text-left p-3 border-b border-zinc-800/50 hover:bg-zinc-800/50 transition-colors ${
-                    conversationId === conv._id ? "bg-zinc-800" : ""
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-sm truncate ${
-                            conv.unreadCount > 0
-                              ? "font-bold text-zinc-100"
-                              : "font-medium text-zinc-300"
-                          }`}
-                        >
-                          {conv.contactName || conv.phone}
-                        </span>
-                        {conv.status === "bot" && (
-                          <Bot className="w-3 h-3 text-violet-400 flex-shrink-0" />
+              filteredConversations?.map((conv) => {
+                const typing = isTypingRecently(conv.contactTypingAt);
+                return (
+                  <button
+                    key={conv._id}
+                    onClick={() => handleSelectConversation(conv._id)}
+                    className={`w-full text-left p-3 border-b border-zinc-800/50 hover:bg-zinc-800/50 transition-colors ${
+                      conversationId === conv._id ? "bg-zinc-800" : ""
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      {/* Checkbox for bulk selection */}
+                      <div
+                        className="flex-shrink-0 mt-0.5"
+                        onClick={(e) => handleToggleSelect(conv._id, e)}
+                      >
+                        {selectedConvIds.has(conv._id) ? (
+                          <CheckSquare className="w-4 h-4 text-emerald-500" />
+                        ) : (
+                          <Square className="w-4 h-4 text-zinc-600 hover:text-zinc-400" />
                         )}
                       </div>
-                      <p className="text-xs text-zinc-500 truncate mt-0.5">
-                        {conv.lastMessageDirection === "outbound" && (
-                          <span className="text-zinc-600">You: </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-sm truncate ${
+                              conv.unreadCount > 0
+                                ? "font-bold text-zinc-100"
+                                : "font-medium text-zinc-300"
+                            }`}
+                          >
+                            {conv.contactName || conv.phone}
+                          </span>
+                          {conv.status === "bot" && (
+                            <Bot className="w-3 h-3 text-violet-400 flex-shrink-0" />
+                          )}
+                        </div>
+                        {typing ? (
+                          <p className="text-xs text-emerald-400 mt-0.5 flex items-center gap-1.5">
+                            typing <TypingDots />
+                          </p>
+                        ) : (
+                          <p className="text-xs text-zinc-500 truncate mt-0.5">
+                            {conv.lastMessageDirection === "outbound" && (
+                              <span className="text-zinc-600">You: </span>
+                            )}
+                            {conv.lastMessageText || "No messages yet"}
+                          </p>
                         )}
-                        {conv.lastMessageText || "No messages yet"}
-                      </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        {conv.lastMessageAt && (
+                          <span className="text-[10px] text-zinc-600">
+                            {formatTimeAgo(conv.lastMessageAt)}
+                          </span>
+                        )}
+                        {conv.unreadCount > 0 && (
+                          <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-emerald-500 rounded-full">
+                            {conv.unreadCount}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      {conv.lastMessageAt && (
-                        <span className="text-[10px] text-zinc-600">
-                          {formatTimeAgo(conv.lastMessageAt)}
-                        </span>
-                      )}
-                      {conv.unreadCount > 0 && (
-                        <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-emerald-500 rounded-full">
-                          {conv.unreadCount}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
@@ -225,6 +416,13 @@ export function InboxPage() {
                     </h3>
                     <p className="text-xs text-zinc-500">
                       {selectedConversation.phone}
+                      {isTypingRecently(
+                        selectedConversation.contactTypingAt,
+                      ) && (
+                        <span className="ml-2 text-emerald-400 inline-flex items-center gap-1">
+                          typing <TypingDots />
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -302,80 +500,217 @@ export function InboxPage() {
                     <p className="text-sm">No messages yet</p>
                   </div>
                 ) : (
-                  messages.map((msg) => (
-                    <div
-                      key={msg._id}
-                      className={`flex ${
-                        msg.direction === "incoming" ? "justify-start" : "justify-end"
-                      }`}
-                    >
+                  messages.map((msg) => {
+                    // Internal note styling
+                    if (msg.isNote) {
+                      return (
+                        <div key={msg._id} className="flex justify-end">
+                          <div className="max-w-[70%] rounded-2xl px-4 py-2.5 bg-amber-500/10 border border-amber-500/20">
+                            <div className="flex items-center gap-1 mb-1">
+                              <StickyNote className="w-3 h-3 text-amber-400" />
+                              <span className="text-[10px] text-amber-400 font-medium">
+                                Note
+                              </span>
+                            </div>
+                            <p className="text-sm whitespace-pre-wrap text-amber-200">
+                              {msg.message}
+                            </p>
+                            <div className="flex items-center gap-1 mt-1 text-amber-400/50">
+                              <span className="text-[10px]">
+                                {new Date(
+                                  msg._creationTime,
+                                ).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
                       <div
-                        className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
+                        key={msg._id}
+                        className={`flex ${
                           msg.direction === "incoming"
-                            ? "bg-zinc-800 text-zinc-200"
-                            : "bg-emerald-600 text-white"
+                            ? "justify-start"
+                            : "justify-end"
                         }`}
                       >
-                        {msg.sentBy === "bot" && (
-                          <div className="flex items-center gap-1 mb-1">
-                            <Bot className="w-3 h-3 text-violet-300" />
-                            <span className="text-[10px] text-violet-300 font-medium">
-                              AI
-                            </span>
-                          </div>
-                        )}
-                        <p className="text-sm whitespace-pre-wrap">
-                          {msg.message}
-                        </p>
                         <div
-                          className={`flex items-center gap-1 mt-1 ${
+                          className={`max-w-[70%] rounded-2xl px-4 py-2.5 ${
                             msg.direction === "incoming"
-                              ? "text-zinc-500"
-                              : "text-emerald-200/70"
+                              ? "bg-zinc-800 text-zinc-200"
+                              : "bg-emerald-600 text-white"
                           }`}
                         >
-                          <span className="text-[10px]">
-                            {new Date(msg._creationTime).toLocaleTimeString(
-                              [],
-                              {
+                          {msg.sentBy === "bot" && (
+                            <div className="flex items-center gap-1 mb-1">
+                              <Bot className="w-3 h-3 text-violet-300" />
+                              <span className="text-[10px] text-violet-300 font-medium">
+                                AI
+                              </span>
+                            </div>
+                          )}
+                          {/* Media preview */}
+                          {msg.mediaStorageId && (
+                            <MediaPreview
+                              mediaStorageId={msg.mediaStorageId}
+                              mediaType={msg.mediaType}
+                            />
+                          )}
+                          <p className="text-sm whitespace-pre-wrap">
+                            {msg.message}
+                          </p>
+                          <div
+                            className={`flex items-center gap-1 mt-1 ${
+                              msg.direction === "incoming"
+                                ? "text-zinc-500"
+                                : "text-emerald-200/70"
+                            }`}
+                          >
+                            <span className="text-[10px]">
+                              {new Date(
+                                msg._creationTime,
+                              ).toLocaleTimeString([], {
                                 hour: "2-digit",
                                 minute: "2-digit",
-                              },
-                            )}
-                          </span>
-                          {msg.direction === "outgoing" && (
-                            <span className="text-[10px]">
-                              {msg.status === "read"
-                                ? "✓✓"
-                                : msg.status === "delivered"
-                                  ? "✓✓"
-                                  : msg.status === "sent"
-                                    ? "✓"
-                                    : msg.status === "failed"
-                                      ? "✗"
-                                      : "⏳"}
+                              })}
                             </span>
-                          )}
+                            {msg.direction === "outgoing" && (
+                              <span className="text-[10px]">
+                                {msg.status === "read"
+                                  ? "\u2713\u2713"
+                                  : msg.status === "delivered"
+                                    ? "\u2713\u2713"
+                                    : msg.status === "sent"
+                                      ? "\u2713"
+                                      : msg.status === "failed"
+                                        ? "\u2717"
+                                        : "\u231B"}
+                              </span>
+                            )}
+                            {msg.mediaType && (
+                              <span className="text-[10px] ml-1 flex items-center gap-0.5">
+                                {msg.mediaType === "image" && (
+                                  <ImageIcon className="w-2.5 h-2.5" />
+                                )}
+                                {msg.mediaType === "video" && (
+                                  <Film className="w-2.5 h-2.5" />
+                                )}
+                                {msg.mediaType === "document" && (
+                                  <FileText className="w-2.5 h-2.5" />
+                                )}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
+                {/* Typing indicator in chat */}
+                {selectedConversation &&
+                  isTypingRecently(selectedConversation.contactTypingAt) && (
+                    <div className="flex justify-start">
+                      <div className="bg-zinc-800 rounded-2xl px-4 py-3">
+                        <TypingDots />
+                      </div>
+                    </div>
+                  )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Chat input */}
               <div className="p-3 border-t border-zinc-800">
+                {/* Note mode indicator */}
+                {isNoteMode && (
+                  <div className="flex items-center gap-2 mb-2 px-2 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <StickyNote className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-xs text-amber-400 font-medium">
+                      Internal note mode — will not be sent via WhatsApp
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-end gap-2">
                   <div className="flex-1 relative">
                     <textarea
                       value={messageInput}
                       onChange={(e) => setMessageInput(e.target.value)}
                       onKeyDown={handleKeyDown}
-                      placeholder="Type a message..."
+                      placeholder={
+                        isNoteMode
+                          ? "Write an internal note..."
+                          : "Type a message..."
+                      }
                       rows={1}
-                      className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder:text-zinc-500 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none resize-none"
+                      className={`w-full px-4 py-2.5 border text-zinc-100 placeholder:text-zinc-500 rounded-xl text-sm focus:ring-2 outline-none resize-none ${
+                        isNoteMode
+                          ? "bg-amber-500/5 border-amber-500/30 focus:ring-amber-500/50 focus:border-amber-500"
+                          : "bg-zinc-800 border-zinc-700 focus:ring-emerald-500/50 focus:border-emerald-500"
+                      }`}
                     />
                   </div>
+                  {/* Quick replies button */}
+                  <div className="relative" ref={quickReplyRef}>
+                    <button
+                      onClick={() => setShowQuickReplies(!showQuickReplies)}
+                      className="p-2.5 text-zinc-400 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors"
+                      title="Quick replies"
+                      aria-label="Quick replies"
+                    >
+                      <Zap className="w-5 h-5" />
+                    </button>
+                    {showQuickReplies && (
+                      <div className="absolute bottom-12 right-0 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden z-10">
+                        <div className="px-3 py-2 border-b border-zinc-800 text-xs font-medium text-zinc-400">
+                          Quick Replies
+                        </div>
+                        <div className="max-h-48 overflow-y-auto">
+                          {quickReplies && quickReplies.length > 0 ? (
+                            quickReplies.map((qr) => (
+                              <button
+                                key={qr._id}
+                                onClick={() => {
+                                  setMessageInput(qr.text);
+                                  setShowQuickReplies(false);
+                                }}
+                                className="w-full text-left px-3 py-2 hover:bg-zinc-800 transition-colors border-b border-zinc-800/50 last:border-b-0"
+                              >
+                                <p className="text-sm font-medium text-zinc-200 truncate">
+                                  {qr.shortcut}
+                                </p>
+                                <p className="text-xs text-zinc-500 truncate">
+                                  {qr.text}
+                                </p>
+                              </button>
+                            ))
+                          ) : (
+                            <p className="px-3 py-4 text-xs text-zinc-500 text-center">
+                              No quick replies yet
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Note toggle button */}
+                  <button
+                    onClick={() => setIsNoteMode(!isNoteMode)}
+                    className={`p-2.5 rounded-xl transition-colors ${
+                      isNoteMode
+                        ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
+                        : "text-zinc-400 bg-zinc-800 hover:bg-zinc-700"
+                    }`}
+                    title={isNoteMode ? "Switch to message" : "Switch to note"}
+                    aria-label={
+                      isNoteMode ? "Switch to message" : "Switch to note"
+                    }
+                  >
+                    <StickyNote className="w-5 h-5" />
+                  </button>
                   {/* Generate with AI button */}
                   <button
                     onClick={() => setShowAiModal(true)}
@@ -389,8 +724,12 @@ export function InboxPage() {
                   <button
                     onClick={handleSend}
                     disabled={!messageInput.trim() || isSending}
-                    className="p-2.5 text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="Send message"
+                    className={`p-2.5 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                      isNoteMode
+                        ? "bg-amber-600 hover:bg-amber-500"
+                        : "bg-emerald-600 hover:bg-emerald-500"
+                    }`}
+                    aria-label={isNoteMode ? "Save note" : "Send message"}
                   >
                     <Send className="w-5 h-5" />
                   </button>
@@ -410,6 +749,37 @@ export function InboxPage() {
           )}
         </div>
       </div>
+
+      {/* Bulk action bar */}
+      {hasSelection && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 bg-zinc-800 border border-zinc-700 rounded-2xl shadow-2xl">
+          <span className="text-sm text-zinc-300 font-medium">
+            {selectedConvIds.size} selected
+          </span>
+          <div className="w-px h-5 bg-zinc-700" />
+          <button
+            onClick={handleBulkArchive}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-200 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors"
+          >
+            <Archive className="w-3.5 h-3.5" />
+            Archive All
+          </button>
+          <button
+            onClick={handleBulkMarkRead}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-zinc-200 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors"
+          >
+            <MailOpen className="w-3.5 h-3.5" />
+            Mark Read
+          </button>
+          <button
+            onClick={() => setSelectedConvIds(new Set())}
+            className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors"
+            title="Clear selection"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Generate with AI Modal */}
       {showAiModal && conversationId && (
