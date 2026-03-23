@@ -94,3 +94,10 @@ tmp/
 
 # Session files
 flask_session/
+
+# Node.js
+node_modules/
+.vercel/
+
+# Convex
+convex/_generated/
