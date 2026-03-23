@@ -1,11 +1,13 @@
 import { Wifi, WifiOff } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface ConnectionStatusProps {
   connected: boolean;
+  href?: string;
 }
 
-export function ConnectionStatus({ connected }: ConnectionStatusProps) {
-  return (
+export function ConnectionStatus({ connected, href }: ConnectionStatusProps) {
+  const card = (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 transition-transform hover:-translate-y-0.5 hover:border-zinc-700">
       <div className="flex items-center gap-3 mb-3">
         <div
@@ -36,4 +38,9 @@ export function ConnectionStatus({ connected }: ConnectionStatusProps) {
       </div>
     </div>
   );
+
+  if (href) {
+    return <Link to={href} className="block">{card}</Link>;
+  }
+  return card;
 }

@@ -24,7 +24,7 @@ export function DashboardPage() {
 
       {/* Stats row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <ConnectionStatus connected={connected} />
+        <ConnectionStatus connected={connected} href="/whatsapp" />
 
         <StatsCard
           icon={<Users className="w-5 h-5 text-blue-400" />}
