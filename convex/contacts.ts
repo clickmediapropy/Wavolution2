@@ -1,35 +1,29 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { Doc, Id } from "./_generated/dataModel";
+import { Id } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
-// Helper: get authenticated user or throw
-async function getUserOrThrow(
+// Helper: get authenticated user ID or throw
+async function getAuthedUserId(
   ctx: QueryCtx | MutationCtx,
-): Promise<Doc<"users">> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
+): Promise<Id<"users">> {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) {
     throw new Error("Not authenticated");
   }
-  const user = await ctx.db
-    .query("users")
-    .withIndex("email", (q) => q.eq("email", identity.email!))
-    .unique();
-  if (!user) {
-    throw new Error("User not found");
-  }
-  return user;
+  return userId;
 }
 
 // Paginated contact list (newest first)
 export const list = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, args) => {
-    const user = await getUserOrThrow(ctx);
+    const userId = await getAuthedUserId(ctx);
     return await ctx.db
       .query("contacts")
-      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .order("desc")
       .paginate(args.paginationOpts);
   },
@@ -39,11 +33,11 @@ export const list = query({
 export const search = query({
   args: { term: v.string() },
   handler: async (ctx, args) => {
-    const user = await getUserOrThrow(ctx);
+    const userId = await getAuthedUserId(ctx);
     return await ctx.db
       .query("contacts")
       .withSearchIndex("search_by_name", (q) =>
-        q.search("name", args.term).eq("userId", user._id),
+        q.search("name", args.term).eq("userId", userId),
       )
       .take(50);
   },
@@ -56,7 +50,7 @@ export const add = mutation({
     name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await getUserOrThrow(ctx);
+    const userId = await getAuthedUserId(ctx);
     const phone = args.phone.trim();
     if (!phone) {
       throw new Error("Phone number is required");
@@ -65,7 +59,7 @@ export const add = mutation({
     const existing = await ctx.db
       .query("contacts")
       .withIndex("by_userId_and_phone", (q) =>
-        q.eq("userId", user._id).eq("phone", phone),
+        q.eq("userId", userId).eq("phone", phone),
       )
       .unique();
     if (existing) {
@@ -73,7 +67,7 @@ export const add = mutation({
     }
 
     return await ctx.db.insert("contacts", {
-      userId: user._id,
+      userId: userId,
       phone,
       name: args.name?.trim() || undefined,
       status: "pending",
@@ -89,9 +83,9 @@ export const update = mutation({
     name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await getUserOrThrow(ctx);
+    const userId = await getAuthedUserId(ctx);
     const contact = await ctx.db.get(args.id);
-    if (!contact || contact.userId !== user._id) {
+    if (!contact || contact.userId !== userId) {
       throw new Error("Contact not found");
     }
 
@@ -105,7 +99,7 @@ export const update = mutation({
       const existing = await ctx.db
         .query("contacts")
         .withIndex("by_userId_and_phone", (q) =>
-          q.eq("userId", user._id).eq("phone", phone),
+          q.eq("userId", userId).eq("phone", phone),
         )
         .unique();
       if (existing) {
@@ -124,9 +118,9 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("contacts") },
   handler: async (ctx, args) => {
-    const user = await getUserOrThrow(ctx);
+    const userId = await getAuthedUserId(ctx);
     const contact = await ctx.db.get(args.id);
-    if (!contact || contact.userId !== user._id) {
+    if (!contact || contact.userId !== userId) {
       throw new Error("Contact not found");
     }
     await ctx.db.delete(args.id);
@@ -140,10 +134,10 @@ export const removeMultiple = mutation({
     if (args.ids.length > 100) {
       throw new Error("Cannot delete more than 100 contacts at once");
     }
-    const user = await getUserOrThrow(ctx);
+    const userId = await getAuthedUserId(ctx);
     for (const id of args.ids) {
       const contact = await ctx.db.get(id);
-      if (contact && contact.userId === user._id) {
+      if (contact && contact.userId === userId) {
         await ctx.db.delete(id);
       }
     }
@@ -164,7 +158,7 @@ export const importBatch = mutation({
     if (args.contacts.length > 100) {
       throw new Error("Batch size cannot exceed 100");
     }
-    const user = await getUserOrThrow(ctx);
+    const userId = await getAuthedUserId(ctx);
 
     let added = 0;
     let duplicates = 0;
@@ -180,7 +174,7 @@ export const importBatch = mutation({
       const existing = await ctx.db
         .query("contacts")
         .withIndex("by_userId_and_phone", (q) =>
-          q.eq("userId", user._id).eq("phone", phone),
+          q.eq("userId", userId).eq("phone", phone),
         )
         .unique();
 
@@ -190,7 +184,7 @@ export const importBatch = mutation({
       }
 
       await ctx.db.insert("contacts", {
-        userId: user._id,
+        userId: userId,
         phone,
         name: contact.name?.trim() || undefined,
         status: "pending",
