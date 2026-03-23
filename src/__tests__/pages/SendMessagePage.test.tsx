@@ -46,14 +46,14 @@ describe("SendMessagePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders contact selector", () => {
+  it("renders searchable combobox for contact selection", () => {
     render(
       <MemoryRouter>
         <SendMessagePage />
       </MemoryRouter>,
     );
 
-    expect(screen.getByLabelText(/select contact/i)).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
   it("renders message textarea", () => {
@@ -86,5 +86,17 @@ describe("SendMessagePage", () => {
     );
 
     expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
+  it("renders message preview panel", () => {
+    render(
+      <MemoryRouter>
+        <SendMessagePage />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByText("Your message preview will appear here"),
+    ).toBeInTheDocument();
   });
 });
