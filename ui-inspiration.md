@@ -1,414 +1,384 @@
-# UI Inspiration Map
+# UI Inspiration Map — Message Hub
 
-> Design audit for Message Hub (wavolution2). Each section documents current state,
-> inspiration from 21st.dev, and specific patterns to steal.
->
-> **Design direction:** Dark mode, data-dense, professional SaaS dashboard.
-> **Stack:** Vite 8 + React 19 + Tailwind CSS v4 (no shadcn/ui yet).
-
----
-
-## Design System Foundation
-
-Before touching any component, lock in these tokens. Every "steal this" below
-must be filtered through this system — not adopted verbatim.
-
-### Visual Identity
-
-**Mood:** Operational control room. Think Bloomberg Terminal meets Linear.
-Not playful, not corporate — *competent*. The UI should feel like it gets out
-of the way and lets the operator work fast.
-
-### Typography Scale
-
-| Role | Size | Weight | Color | Usage |
-|------|------|--------|-------|-------|
-| Page title | text-2xl (24px) | font-bold | text-zinc-100 | One per page, top-left |
-| Section heading | text-lg (18px) | font-semibold | text-zinc-100 | Card headers, dialog titles |
-| Body | text-sm (14px) | font-normal | text-zinc-300 | Default text, form labels |
-| Caption | text-xs (12px) | font-medium | text-zinc-500 | Timestamps, hints, badges |
-| Mono | text-sm font-mono | font-normal | text-zinc-300 | Phone numbers, IDs, code |
-
-### Color Semantics
-
-| Role | Token | Usage |
-|------|-------|-------|
-| Surface | bg-zinc-950 | Page background |
-| Card | bg-zinc-900 | Elevated containers |
-| Border | border-zinc-800 | Card/input borders |
-| Border hover | border-zinc-700 | Hover states on interactive containers |
-| Primary action | bg-emerald-600 / hover:bg-emerald-500 | CTAs, primary buttons |
-| Destructive | bg-red-600 / hover:bg-red-500 | Delete, stop campaign |
-| Success | text-emerald-400, bg-emerald-500/10 | Sent status, connected |
-| Warning | text-amber-400, bg-amber-500/10 | Pending status |
-| Error | text-red-400, bg-red-500/10 | Failed status, errors |
-| Muted text | text-zinc-500 | Helper text, captions |
-
-### Spacing Rhythm
-
-| Context | Value | Example |
-|---------|-------|---------|
-| Page padding | px-4 sm:px-6 lg:px-8 | AppLayout main area |
-| Card padding | p-6 | All cards and dialogs |
-| Form field gap | space-y-4 | Vertical form fields |
-| Section gap | mb-6 | Between page header and content |
-| Button group gap | gap-3 | Side-by-side buttons |
-| Table cell padding | px-4 py-3 | All table cells |
-
-### Component Conventions
-
-| Element | Radius | Shadow | Pattern |
-|---------|--------|--------|---------|
-| Card | rounded-xl | none (border only) | `bg-zinc-900 border border-zinc-800 rounded-xl` |
-| Input | rounded-lg | none | `bg-zinc-800 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-emerald-500/50` |
-| Button (primary) | rounded-lg | none | `bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg` |
-| Button (secondary) | rounded-lg | none | `bg-zinc-800 border border-zinc-700 text-zinc-300 rounded-lg` |
-| Badge | rounded-full | none | `px-2.5 py-0.5 rounded-full text-xs font-medium` |
-| Dialog | rounded-xl | shadow-2xl | `bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl` |
-
-### Implementation Priority
-
-**Tier 1 — High impact, do now** (existing components, visible improvement):
-- ContactTable: pagination + sort indicators
-- UploadContactsPage: drag-and-drop zone
-- SendMessagePage: replace native `<select>` with custom combobox
-- ConnectWhatsAppPage: white QR background + skeleton loading
-
-**Tier 2 — Medium impact, do with next phase**:
-- LoginPage / RegisterPage: motion entrance + password toggle
-- AddContactDialog + EditContactDialog: merge into ContactFormDialog
-- SetupWhatsAppPage + ConnectWhatsAppPage: step indicator
-- MediaUpload: drag-and-drop + auto-upload
-
-**Tier 3 — Build fresh with these patterns** (pending components):
-- BulkCampaignPage (Phase 4): multi-step form
-- CampaignStatusPage (Phase 4): progress + stats grid
-- DashboardPage rewrite (Phase 5): stat cards + activity feed
-- LandingPage (Phase 6): hero + CTAs
-
-**Tier 4 — Polish** (defer until core is solid):
-- framer-motion animations (all pages)
-- react-countup for dashboard numbers
-- LoadingSkeleton variants
-- ResponsiveContactTable card layout
+Complete inspiration guide for all pages and components in the project.
+Source: 21st.dev, web search, and design patterns research.
 
 ---
 
 ## Batch 1 — Auth & Layout
 
 ### AppLayout
-- **Status:** Existing — improve (keep top nav)
-- **Current:** Sticky top navbar with logo, 3 NavLinks (Dashboard, Contacts, Send), logout button. Uses `bg-zinc-900/80 backdrop-blur-xl`. No mobile hamburger, no footer.
+- **Status:** Existing — improve
+- **Current:** Navbar with Lucide icons, auth-aware logout, footer, Sonner toasts
 - **Inspiration found:**
-  - **Sidebar Component** (21st.dev) — Full collapsible sidebar with icon groups. Reviewed but **rejected** — sidebars are for 8+ nav items. Message Hub has 4-5 routes.
-  - **SaaS Template Navigation** — Fixed top nav with centered links, sign-in/sign-up on right, mobile hamburger that slides down. Clean and appropriate for this route count.
-- **Steal this:** Keep horizontal top nav. Improve it: (1) add Lucide icons next to each nav label for scanability, (2) add a mobile hamburger for `<md` viewports, (3) add a subtle bottom border glow on the active nav item instead of just background color.
-- **Implementation note:** Add icons: `<LayoutDashboard className="w-4 h-4" />` next to "Dashboard", `<Users />` next to "Contacts", `<Send />` next to "Send", `<Megaphone />` next to "Campaigns" (Phase 4). Active state: keep `bg-emerald-500/10 text-emerald-400` but add `border-b-2 border-emerald-500` for stronger active signal. On mobile (`md:hidden`), render a `<Menu />` hamburger that toggles a dropdown panel. When Phase 4 adds Campaigns, the nav will have 4 items — still fine for horizontal.
+  - **Dashboard with Collapsible Sidebar** by uniquesonu (21st.dev) — Collapsible sidebar with icon-only mode, dark mode toggle, smooth transitions
+  - **Modern sideBar** by uniquesonu (21st.dev) — Collapsible states using framer-motion, tooltips in collapsed mode
+- **Steal this:** Add collapsible sidebar with icon-only compact mode that animates smoothly using framer-motion. Use tooltips when collapsed.
+- **Implementation note:** Add `collapsed` state to AppLayout. Use `AnimatePresence` for smooth width transitions. Add `group-hover` tooltips for nav items when collapsed.
 
 ### LoginPage
 - **Status:** Existing — improve
-- **Current:** Centered card with emerald logo icon, "Welcome back" heading, email/password fields, submit button, register link. Clean but plain — no motion, no visual interest beyond the icon.
+- **Current:** Email/password login with gradient button, background glow, framer-motion entrance
 - **Inspiration found:**
-  - **Auth Form** (21st.dev) — Framer Motion entrance animation (`opacity: 0, y: 25` to visible), social login buttons grid, "OR" divider, "Forgot?" link next to password label, background grid SVG decoration fading with radial gradient. Dark mode native.
-  - **Sign In (LightLogin)** — Password show/hide toggle button, gradient submit button (`from-blue-600 via-blue-500 to-blue-400`), social login grid (Google/GitHub), elevated card with subtle shadow. h-12 input height for better touch targets.
-  - **Login Card** — Minimal shadcn-based card with clean Label/Input/Button primitives.
-- **Steal this:** Add Framer Motion fade-in-up on the card (replace CSS `animate-fadeIn`). Add a password show/hide toggle. Add subtle background decoration (grid pattern or gradient blur). Use a gradient-tinted submit button instead of flat `bg-emerald-600`.
-- **Implementation note:** Install `framer-motion`. Wrap card in `<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>`. Add `Eye`/`EyeOff` toggle from lucide-react next to password input. Replace submit with `bg-gradient-to-t from-emerald-600 via-emerald-500 to-emerald-400`. Consider adding a subtle `before:` pseudo-element with a radial gradient blur behind the card for depth.
+  - **Background Gradient Animation** by aceternity (21st.dev) — Animated mesh gradient background with smooth color transitions
+  - **Animated Gradient Button** by chowlol202 (21st.dev) — Button with animated gradients, hover/tap interactions, dark mode support
+- **Steal this:** Add animated mesh gradient background behind the login card for more visual depth.
+- **Implementation note:** Use CSS `background: radial-gradient()` with `animation: pulse 8s ease-in-out infinite`. Keep the existing gradient button but add a subtle glow effect on focus.
 
 ### RegisterPage
 - **Status:** Existing — improve
-- **Current:** Nearly identical to LoginPage with added name and confirm password fields. Same centered card layout.
+- **Current:** Name/email/password with gradient button, password strength indicator, framer-motion
 - **Inspiration found:**
-  - **Signup Form (Aceternity)** — First/last name in a 2-column grid on desktop, bottom gradient glow animation on hover over submit button, social login options with icon + label.
-  - **Registration** — Full card with CardHeader/CardContent/CardFooter pattern, password eye toggle, terms checkbox with links, role selector dropdown. Card footer with border-top separator.
-  - **Login Card** — Same clean primitives as above.
-- **Steal this:** Add password show/hide toggle (same as LoginPage). Add a `border-t` separator for the "Already have an account?" link to create visual hierarchy. Keep single Name field (Convex Auth uses a single `name` field — splitting would require schema changes for no user benefit).
-- **Implementation note:** Add the same motion wrapper as LoginPage. Add `Eye`/`EyeOff` toggle on both password fields. Add `border-t border-zinc-800 pt-4 mt-2` to the sign-in link section. Consider a lightweight password strength indicator: 4 small bars that fill based on length + character variety (pure CSS, no library).
+  - Same as LoginPage for gradient background consistency
+  - **Animated Gradient With SVG** by danielpetho (21st.dev) — SVG-based animated gradients for premium feel
+- **Steal this:** Maintain visual consistency with LoginPage but add floating form labels that animate on focus.
+- **Implementation note:** Use `peer-placeholder-shown` Tailwind classes for floating labels. Keep existing password strength indicator but animate the strength bar width with framer-motion.
+
+### LandingPage
+- **Status:** Existing — improve
+- **Current:** Announcement badge, gradient heading, dashboard mockup, features grid, login/register CTAs
+- **Inspiration found:**
+  - **Hero Landing Page** by minhxthanh (21st.dev) — Dark theme with video background, striking visuals
+  - **Enterprise-Ready Landing Page Hero** by uniquesonu (21st.dev) — Bold headline, subtext, dual CTAs, theme-aware
+  - **Light Theme Waitlist Landing Page** by muhammad-binsalman (21st.dev) — Countdown timer, waitlist signup
+- **Steal this:** Add subtle animated gradient mesh background to hero section + floating mockup elements that respond to scroll.
+- **Implementation note:** Use `framer-motion` for parallax scroll effects on the dashboard mockup. Add `whileInView` animations for the features grid.
+
+### NotFoundPage
+- **Status:** Existing — improve
+- **Current:** 404 illustration + "Go Home" link
+- **Inspiration found:**
+  - **404 Page Error 3D Template** by SlideFactory — 3D illustrations, multiple themes
+  - **Page Not Found Template Set** by wowomnom — Simplified stroke design, bright colors
+- **Steal this:** Add a playful animated illustration (Lottie or SVG) with a "Take me home" floating button.
+- **Implementation note:** Use `lucide-react` icons arranged creatively or embed a Lottie animation. Add `framer-motion` bounce effect to the CTA button.
+
+### ErrorBoundary
+- **Status:** Existing — improve
+- **Current:** Catches React rendering errors, shows fallback with retry button
+- **Inspiration found:**
+  - **Empty States** pattern from 21st.dev — Friendly illustrations when things go wrong
+- **Steal this:** Design a friendly "Oops" illustration with clear error messaging and actionable retry/report buttons.
+- **Implementation note:** Use a two-column layout: illustration on left, error details + actions on right. Include `console.error` details in a collapsible section.
 
 ---
 
-## Batch 2 — Contacts
+## Batch 2 — Contacts & Data
 
 ### ContactsPage
 - **Status:** Existing — improve
-- **Current:** Page header with icon + title, Upload CSV + Add Contact buttons, search input with icon, ContactTable component, 3 dialog components. Well-structured but page header could use more visual weight.
+- **Current:** ContactTable with count badge, status filter chips, sortable columns, bulk delete
 - **Inspiration found:**
-  - **Contact 2** (shadcnblocks) — Two-column layout with contact info sidebar and form. Good pattern for info density.
-  - **Dark Contact Section** — Gradient blur background decoration behind form, clean spacing with `max-w-screen-xl`.
-- **Steal this:** Add a subtle count badge next to the "Contacts" heading showing total contacts. Add filter chips/tabs above the search bar (All / Pending / Sent / Failed) for quick status filtering.
-- **Implementation note:** Add `<span className="text-sm text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full ml-2">{count}</span>` next to the heading. Consider a row of filter buttons using the same `statusConfig` colors from ContactTable for visual consistency.
+  - **Data Table From Scratch** by morewings — Dark theme, column pinning, advanced sorting/filtering
+  - **Laravel Livewire Tables** — Sortable, searchable, filterable columns pattern
+- **Steal this:** Add column visibility toggle (show/hide columns) and saved filter presets.
+- **Implementation note:** Use localStorage to persist column visibility and filter preferences. Add a dropdown menu for column toggles in the table header.
 
 ### ContactTable
 - **Status:** Existing — improve
-- **Current:** HTML `<table>` with checkbox select-all, name/phone/status/actions columns, status badges with colored dots, edit/delete icon buttons, "Load more" pagination. Clean implementation.
+- **Current:** Paginated table with search, select, sortable columns, status filter chips, bulk actions
 - **Inspiration found:**
-  - **Paginated Table (TanStack)** — Full TanStack Table with column sorting (chevron up/down indicators), pagination with first/prev/next/last buttons + rows-per-page selector, Badge components for status, proper Checkbox primitives from Radix.
-  - **Data Table patterns** — Column header sort indicators, sticky header on scroll, row hover highlights with subtle background shift.
-- **Steal this:** Keep "Load more" (correct for Convex cursor pagination) but upgrade its visual treatment. Add column sort indicators on Name and Status headers. Improve the empty state with a larger illustration area.
-- **Implementation note:** "Load more" button: upgrade to full-width with a count label: `<button className="w-full py-2.5 text-sm ...">Load more · {results.length} loaded</button>`. Add client-side sorting: `onClick` on `<th>` toggles `sortField` + `sortDir` in state, `useMemo` sorts the already-loaded results. Don't install TanStack Table — the current HTML table is fine for 4 columns. For status badges, the current dot+span pattern is already good; defer Badge component to shadcn adoption in Phase 5.
+  - **TanStack Table** patterns — Virtualization for 50k+ rows, sticky headers, column resizing
+  - **Data Table Components** on 21st.dev — 30+ table components with sorting and filtering
+- **Steal this:** Add column resizing handles and row virtualization for performance with large datasets.
+- **Implementation note:** Use `@tanstack/react-table` with `react-window` for virtualization. Add `resize` cursor handles between column headers.
 
-### AddContactDialog
+### ContactFormDialog
 - **Status:** Existing — improve
-- **Current:** Custom modal overlay with backdrop blur, form with phone (required) + name (optional), cancel/submit buttons. Uses `animate-slideUp`.
+- **Current:** Unified add/edit contact dialog with subtitle for mode indication
 - **Inspiration found:**
-  - **Dialog (Radix/shadcn)** — Proper `DialogHeader`/`DialogFooter` structure, `DialogDescription` for subtitle text, `animate-in`/`animate-out` with zoom-in-95 and fade transitions. Close button uses `Cross2Icon`.
-  - **Signup Dialog (Ark UI)** — Compact dialog with icon + title inline in header, `space-y-1` for tight label spacing, `text-xs` for labels.
-- **Steal this:** Add a `DialogDescription` subtitle under the title ("Add a new contact to your list"). Use the Radix Dialog animate-in/animate-out pattern for smoother transitions. Consider a phone number format hint below the input.
-- **Implementation note:** Add `<p className="text-sm text-zinc-500 mt-1">Add a new contact to your list</p>` below the h2. Add `<p className="text-xs text-zinc-500 mt-1">Include country code (e.g. +54...)</p>` below phone input. These are minor polish items — the existing dialog structure is solid.
-
-### EditContactDialog
-- **Status:** Existing — improve
-- **Current:** Nearly identical to AddContactDialog but pre-fills values from `contact` prop. Same layout.
-- **Inspiration found:** Same as AddContactDialog results.
-- **Steal this:** Merge Add and Edit into a single reusable `ContactFormDialog` component that accepts an optional `contact` prop to determine mode. Reduces code duplication.
-- **Implementation note:** Create `ContactFormDialog` with `mode: "add" | "edit"` derived from whether `contact` prop exists. Title changes based on mode. Reduces ~120 lines of duplicated dialog code to one component.
+  - **Dialog/Modal Components** on 21st.dev — 37+ modal patterns with focus trapping
+- **Steal this:** Add slide-in animation from right (drawer-style) on desktop, full-screen modal on mobile.
+- **Implementation note:** Use `framer-motion` for enter/exit animations. Use `Sheet` component pattern for the slide-in effect.
 
 ### DeleteConfirmDialog
 - **Status:** Existing — improve
-- **Current:** Centered destructive dialog with `AlertTriangle` icon in red circle, count-aware text, cancel/delete buttons. Clean and functional.
+- **Current:** Type-to-confirm destructive action dialog
 - **Inspiration found:**
-  - **Delete Project Dialog (Origin UI)** — Type-to-confirm pattern: user must type the name to enable the delete button. `CircleAlert` icon in a bordered circle, centered layout.
-  - **NativeDelete Button** — Animated delete with Framer Motion: first click expands to "Confirm", second click deletes, with a cancel X button that appears. Icon transitions between Trash2 and Check.
-  - **Delete Confirmation Popover** — Popover-based (not modal) confirmation with destructive styling, warning box in `bg-destructive/10`.
-- **Steal this:** Keep the current modal pattern (simpler for our case) but add a subtle warning box: `<div className="bg-red-500/5 border border-red-500/10 rounded-lg px-3 py-2 text-xs text-red-400">` listing what will be deleted. For bulk deletes (>5), consider the type-to-confirm pattern.
-- **Implementation note:** Add a conditional warning for bulk deletes: `{count > 5 && <div className="...">This is a bulk operation affecting {count} records.</div>}`. Keep simple for single deletes.
+  - **Destructive Actions** pattern — Red accents, clear warnings, irreversible action indicators
+- **Steal this:** Add a shaking animation when user types incorrectly and a 3-second countdown before enabling the delete button.
+- **Implementation note:** Use `framer-motion` shake animation (`x: [-10, 10, -10, 10, 0]`). Add `setTimeout` for the countdown delay.
 
 ### UploadContactsPage
 - **Status:** Existing — improve
-- **Current:** File input with CSV format instructions, import button, results grid showing added/duplicates/errors with colored stat boxes. Functional but the upload area is a plain `<input type="file">`.
+- **Current:** StepIndicator, drag-drop zone, CSV preview table, confirm upload
 - **Inspiration found:**
-  - **File Upload (motion)** — Gorgeous drag-and-drop zone with `UploadCloud` icon that bounces when dragging, blue ring glow on drag, animated file list with progress bars that transition from blue to emerald on completion. `CheckCircle` badge on completed files.
-  - **File Upload (shadcn)** — Simpler dashed border upload zone with icon, file preview card showing filename + size + status in a `bg-muted` container with X remove button.
-  - **File Uploader** — Drag-and-drop with isDragging state toggle, file preview with thumbnail or generic icon, progress bar simulation.
-- **Steal this:** Replace the plain `<input type="file">` with a drag-and-drop zone. Dashed border container with `UploadCloud` icon, "Drag & drop your CSV here, or browse" text. On file selected, show a file preview card with the CSV icon, filename, and size. Keep the existing batch import logic.
-- **Implementation note:** Add a `<div onDragOver/onDrop>` wrapper with `border-2 border-dashed border-zinc-700 rounded-xl p-8 text-center cursor-pointer hover:border-emerald-500/50 transition-colors`. Hide the `<input>` and trigger it on click. Show the file preview in a compact card below the drop zone when a file is selected.
+  - **File Upload** by anubra266 (21st.dev) — Drag & drop with files table, upload progress
+  - **Dropzone** by haydenbleasel (21st.dev) — Clean drag-and-drop with visual feedback
+- **Steal this:** Add upload progress bars for each file and a "recent uploads" history section.
+- **Implementation note:** Use `framer-motion` for the drop zone scale effect (already implemented). Add individual progress indicators using `HTML5 FileReader` with `onprogress` events.
+
+### SearchableCombobox
+- **Status:** Existing — improve
+- **Current:** Searchable dropdown combobox with WhatsApp number display
+- **Inspiration found:**
+  - **Select Components** on 21st.dev — 62+ select patterns with search
+  - **Command Palette** patterns — Fuzzy search, keyboard navigation
+- **Steal this:** Add fuzzy search (fuse.js) and keyboard navigation (arrow keys + Enter to select).
+- **Implementation note:** Integrate `fuse.js` for fuzzy matching. Add `onKeyDown` handlers for arrow key navigation with visual highlight.
+
+### StepIndicator
+- **Status:** Existing — improve
+- **Current:** Multi-step wizard progress indicator with emerald active styling
+- **Inspiration found:**
+  - **Multi-step Wizard** by dhileepkumargm (21st.dev) — Responsive design, visual step indicator
+  - **Wizard Progress Navigator** patterns — Connected steps with animation
+- **Steal this:** Add connector lines between steps that animate (fill progress) when advancing.
+- **Implementation note:** Use `framer-motion` `layoutId` for smooth step indicator movement. Animate connector line width from 0% to 100% between active steps.
 
 ---
 
 ## Batch 3 — WhatsApp & Messaging
 
-### SetupWhatsAppPage
+### WhatsAppPage
 - **Status:** Existing — improve
-- **Current:** Centered card with phone icon, title, description, and "Create Instance" button. Simple onboarding step.
+- **Current:** Smart rendering: setup form / QR code scanner / connected management. Multi-instance support
 - **Inspiration found:**
-  - **Onboarding Checklist** — Checklist with numbered steps, helper links, embedded video tutorial. Progressive disclosure with checkmarks.
-- **Steal this:** Add numbered steps showing the full setup flow: 1. Create instance (current step), 2. Scan QR code, 3. Start messaging. Show current step highlighted. Gives users context of what's coming next.
-- **Implementation note:** Add a simple `<ol>` above the card with 3 steps styled as `flex gap-4` horizontal pills. Step 1 active (`bg-emerald-500/10 text-emerald-400 border-emerald-500/20`), steps 2-3 inactive (`text-zinc-500 border-zinc-800`). Each pill: number + label.
-
-### ConnectWhatsAppPage
-- **Status:** Existing — improve
-- **Current:** QR code display in a 264px box, instructions, refresh button, "Waiting for connection..." pulse indicator. Polls every 5 seconds.
-- **Inspiration found:**
-  - **QR Code Generator** — Card-based QR display with CardHeader/CardContent structure, loading skeleton (`animate-pulse`), download button, size display.
-  - **QR Code (Ark UI)** — Clean minimal QR with `bg-white` container, rounded border, padding for scannability.
-  - **QR Code with URL** — Icon + title + description header, QR in white padded container with `shadow-lg`, URL display below with `ExternalLink` icon, instructional text.
-- **Steal this:** Add a white background padding around the QR for better scannability (`bg-white p-4 rounded-lg` inside the dark container). Add the step indicator from SetupWhatsAppPage showing step 2 is active. Add a skeleton loading placeholder while QR loads instead of just a spinner.
-- **Implementation note:** Wrap the `<img>` in `<div className="bg-white rounded-lg p-4">` so the QR has proper contrast. Add `{isLoadingQr && <div className="w-full h-full bg-zinc-700 animate-pulse rounded-lg" />}` as the loading state.
+  - **Integrations Component** by meschacirung (21st.dev) — Connection status, provider cards
+  - **Connection patterns** — Green/red status indicators with refresh actions
+- **Steal this:** Add animated connection status transitions and a connection health graph (last 24h).
+- **Implementation note:** Use `recharts` or simple SVG sparklines for health graph. Animate status dot with `animate-pulse` when connecting.
 
 ### SendMessagePage
 - **Status:** Existing — improve
-- **Current:** Contact selector (native `<select>`), textarea for message, MediaUpload component, send button. Functional but the native select looks out of place.
+- **Current:** SearchableCombobox for contacts, MessageTemplateEditor, MediaUpload, MessagePreview
 - **Inspiration found:**
-  - **Composer Input** — Rich text area with top toolbar (bold/italic/underline), bottom action bar (attach, mic, image, AI), attachment grid preview with remove buttons, "Send" button with `CornerDownLeft` icon. Full featured.
-  - **Email Client Card** — Message display with avatar, sender info, reactions, reply input. Good for showing sent message previews.
-- **Steal this:** Replace native `<select>` with a searchable combobox/dropdown. Add a WhatsApp-style message preview panel showing how the message will look. Keep the composer simple (no rich text — WhatsApp is plain text) but improve the visual styling.
-- **Implementation note:** Replace `<select>` with a custom dropdown: `<div className="relative">` with an input that filters contacts on type, dropdown list below. Add a preview panel to the right (on desktop) or below (on mobile) showing the message in a WhatsApp-style chat bubble: `<div className="bg-emerald-600/20 rounded-lg rounded-tr-none p-3 max-w-xs">`.
+  - **MessageInput** from Stream Chat SDK — Composer with attachments, emoji picker, typing indicators
+  - **Textarea Components** on 21st.dev — 22+ textarea patterns with auto-resize
+- **Steal this:** Add emoji picker and mention autocomplete (@contact) in the message composer.
+- **Implementation note:** Use `emoji-picker-react` for emoji support. Add `@mention` detection with a dropdown of matching contacts.
 
 ### MediaUpload
 - **Status:** Existing — improve
-- **Current:** File input with accepted types validation, file preview row with media icon + filename + size + upload/uploaded status + remove button. Two-step: select then click "Upload".
+- **Current:** Drag-drop file upload with framer-motion scale animations, type/size validation
 - **Inspiration found:**
-  - **File Upload (motion drag-drop)** — Drag-and-drop with animated progress bars, file thumbnails for images, CheckCircle completion indicator.
-  - **Upload Input** — Split card with image preview on left and file info on right, drag-and-drop support, progress bar overlay.
-- **Steal this:** Add drag-and-drop support to the media upload. Show image thumbnails for image files. Auto-upload on file selection (remove the manual "Upload" button step).
-- **Implementation note:** Wrap in a drop zone div. For image files, use `URL.createObjectURL(file)` to show a small thumbnail preview. Auto-trigger upload on file selection instead of requiring a separate button click.
+  - **File Upload** by preetsuthar17 (21st.dev) — Interactive and animated with progress animations
+  - **Dropzone** by haydenbleasel (21st.dev) — Upload files with visual feedback
+- **Steal this:** Add thumbnail previews for images/videos with a remove button on hover.
+- **Implementation note:** Use `URL.createObjectURL()` for instant previews. Add `framer-motion` layout animations for the grid of thumbnails.
 
----
-
-## Batch 4 — Campaigns (pending — define patterns)
-
-### BulkCampaignPage
-- **Status:** Pending — Phase 4
+### MessagePreview
+- **Status:** Existing — improve
+- **Current:** Live preview of composed message with personalization tokens
 - **Inspiration found:**
-  - **Multi-step Form (stepper)** — Numbered step indicators at top, sections revealed progressively, validation per step before advancing.
-  - **Composer Input** — Rich compose area with toolbar and attachment grid.
-- **Steal this:** Use a multi-step layout with 3 steps: 1. Recipients, 2. Message, 3. Review & Send. Step indicator at top. Each step is a card section. "Next" / "Back" buttons at bottom. Review step shows a summary of everything before the final "Start Campaign" button.
-- **Implementation note:** Use `useState<1|2|3>(1)` for current step. Render conditionally: step 1 = RecipientSelector, step 2 = MessageTemplateEditor + MediaUpload + DelayConfig, step 3 = summary card with all settings + "Start Campaign" CTA. Step bar: `<div className="flex gap-2">` with 3 circles connected by lines.
-
-### CampaignStatusPage
-- **Status:** Pending — Phase 4
-- **Inspiration found:**
-  - **Progress (Radix)** — Linear progress bar with `translateX` animation, clean `h-1.5 rounded-full bg-secondary` track with `bg-primary` indicator.
-  - **ProgressCircle** — SVG circle progress for a more visual ETA indicator.
-  - **Progress with status** — Status message updates based on progress percentage ("Downloading assets...", "Finalizing...").
-- **Steal this:** Use a large linear progress bar with percentage + status message below. Add a 3-column stat grid: Sent (emerald), Failed (red), Remaining (zinc). Add ETA using a simple time calculation. Stop button should be red/destructive styled.
-- **Implementation note:** Layout: progress bar at top, stats grid below, message log at bottom. Use `<progress>` element or a custom div bar. Stats use the same colored card pattern as the CSV import results.
-
-### RecipientSelector
-- **Status:** Pending — Phase 4
-- **Inspiration found:**
-  - **Radio Group (Radix)** — Clean radio with `Circle` fill indicator, `grid gap-2` layout, accessible with proper labeling.
-  - **Radio Button (cosmic)** — Styled radio with colored borders per option, animated ring on selection, bold label when selected.
-- **Steal this:** Use radio cards (not just radio buttons). Each option is a clickable card with icon + label + count: "All Contacts (150)", "Pending Only (45)", "Select Manually". When "Select Manually" is chosen, reveal a checkbox list of contacts below.
-- **Implementation note:** Radio card pattern: `<label className="flex items-center gap-3 p-4 rounded-lg border border-zinc-800 cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-500/5">` wrapping a hidden radio input + icon + label + count badge.
+  - **Message bubbles** from chat UI patterns — WhatsApp-style message bubbles with timestamps
+- **Steal this:** Make the preview look exactly like a WhatsApp message bubble (green for sent, white for received).
+- **Implementation note:** Use Tailwind classes: `bg-emerald-500 text-white rounded-2xl rounded-tr-sm` for sent messages. Add a "delivered" checkmark icon.
 
 ### MessageTemplateEditor
-- **Status:** Pending — Phase 4
+- **Status:** Existing — improve
+- **Current:** Textarea with `{name}`/`{phone}` token buttons and live preview panel
 - **Inspiration found:**
-  - **Composer Input** — Textarea with toolbar buttons above.
-  - **UltraQualityEmailBuilder** — Drag-and-drop blocks with editable content, Tailwind style input. Good for complex builders.
-- **Steal this:** Simple textarea with token insertion buttons above it (`{name}`, `{phone}`) and a live preview panel alongside. Keep it simple — no rich text, no drag-and-drop blocks.
-- **Implementation note:** Layout: `<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">`. Left: textarea with token buttons above. Right: preview panel showing the message with a sample contact's data substituted in. Token buttons: `<button onClick={() => insertAtCursor("{name}")}>`.
+  - **Rich text editors** with variable insertion — Token pills inside the textarea
+- **Steal this:** Replace plain `{name}` tokens with styled "pills" that can be clicked to remove.
+- **Implementation note:** Use `contentEditable` with styled spans for tokens, or overlay a positioned div on top of textarea. Add `onClick` to pills for removal.
+
+---
+
+## Batch 4 — Campaign System
+
+### BulkCampaignPage
+- **Status:** Existing — improve
+- **Current:** RecipientSelector, MessageTemplateEditor, MediaUpload, DelayConfig, start campaign
+- **Inspiration found:**
+  - **Campaign builder patterns** — Multi-step forms with progress, section validation
+  - **Form wizard** patterns — Step-by-step with validation per step
+- **Steal this:** Convert to a true multi-step wizard with validation before allowing next step.
+- **Implementation note:** Use `react-hook-form` with step validation. Add `framer-motion` page transitions between steps.
+
+### CampaignStatusPage
+- **Status:** Existing — improve
+- **Current:** Real-time progress bar, sent/failed/remaining counts, ETA, stop button
+- **Inspiration found:**
+  - **Progress Card** by lavikatiyar (21st.dev) — Animated progress bar with icon, customizable labels
+  - **alive-progress** library — Real-time throughput, ETA, cool animations
+- **Steal this:** Add a live throughput graph showing messages/minute and estimated completion time.
+- **Implementation note:** Use `recharts` AreaChart for throughput visualization. Update ETA calculation based on recent sending speed.
+
+### CampaignHistoryPage
+- **Status:** Existing — improve
+- **Current:** Campaign list with status badges, links to individual campaign status
+- **Inspiration found:**
+  - **Activity feed patterns** — Timeline view with status indicators
+  - **History/Logs components** on 21st.dev — Sortable, filterable lists
+- **Steal this:** Add a timeline view option (toggle between table and timeline) and filtering by date/status.
+- **Implementation note:** Use `framer-motion` layout animations when switching views. Add date range picker for filtering.
+
+### RecipientSelector
+- **Status:** Existing — improve
+- **Current:** Radio group (all/pending/selected) + optional contact checkboxes
+- **Inspiration found:**
+  - **Radio Groups** on 21st.dev — 22+ patterns with custom styling
+  - **Audience selector patterns** — Segmented controls with counts
+- **Steal this:** Add recipient count badges next to each option and a search/filter within the "selected" view.
+- **Implementation note:** Use `badge` component pattern for counts. Add `fuse.js` search for filtering the selected contacts list.
 
 ### DelayConfig
-- **Status:** Pending — Phase 4
+- **Status:** Existing — improve
+- **Current:** Slider/input for delay between messages (default: 5s)
 - **Inspiration found:**
-  - **Slider (Radix)** — Clean slider with `h-5 w-5` thumb, `h-2` track, `bg-primary` range indicator, tooltip showing value on drag.
-  - **Dual Range Slider** — Labels displayed above thumbs, clean Radix primitives.
-  - **Slider with Input** — Slider paired with a numeric input field for precise control, reset button.
-- **Steal this:** Slider paired with a numeric input. The slider provides quick adjustment (1-30 seconds), the input allows precise typing. Show "5 seconds between messages" label below.
-- **Implementation note:** `<div className="flex items-center gap-4">` with `<input type="range" min={1} max={30} />` and `<input type="number" className="w-16" />` synced via state. Add a label: `<p className="text-xs text-zinc-500 mt-1">{delay}s delay between each message</p>`.
+  - **Sliders** on 21st.dev — 45+ slider patterns with labels and tooltips
+  - **Slider patterns** — Range inputs with value labels, step markers
+- **Steal this:** Add preset buttons (Fast: 1s, Normal: 5s, Slow: 10s, Custom) alongside the slider.
+- **Implementation note:** Use segmented control for presets, slider appears when "Custom" is selected. Add tooltip showing current value on slider thumb.
 
 ---
 
-## Batch 5 — Dashboard (pending — define patterns)
+## Batch 5 — Dashboard Components
 
 ### DashboardPage
-- **Status:** Existing shell — Phase 5 rewrite
-- **Current:** 4-card grid (WhatsApp status, contacts count, messages sent, quick actions), plus a placeholder welcome message. Basic stat cards with icon + label + value.
+- **Status:** Existing — improve
+- **Current:** 4 StatsCards grid (animated countup), ConnectionStatus card, RecentMessages list, QuickActions
 - **Inspiration found:**
-  - **AnalyticsDashboard** (21st.dev) — 4-column stat grid with mini sparkline charts in each card, change percentage badges (green/red), hover elevation (`hover:-translate-y-1`), header with title + description + "Generate Report" button. Uses Recharts for inline sparklines.
-  - **Stats (shadcn)** — Clean stat cards with name + value + change indicator, CardFooter with "View more →" link. Uses `dl` semantic markup.
-  - **Incident Analytics** — Rich dashboard with funnel chart, metric rows with up/down arrows, CountUp animation for numbers.
-- **Steal this:** Keep the current 4-card stat grid — it's the right pattern. Improve it: (1) bigger numbers (text-3xl → text-4xl), (2) icon in a colored circle for each card, (3) hover lift (`hover:-translate-y-0.5 transition-transform`). Below the grid, add a 2-column layout: left = RecentMessages list, right = QuickActions + ConnectionStatus. Skip sparklines (no time-series data in Convex).
-- **Implementation note:** CountUp is a nice-to-have — defer to Phase 5 polish. The bigger win is layout: replace the placeholder welcome card with actual content (RecentMessages + active campaign progress). Header pattern: keep the existing `<h1>Dashboard</h1>` but add `<p className="text-sm text-zinc-500">Overview of your messaging activity</p>` below.
+  - **Analytics Dashboard** patterns — Grid layouts, widget system
+  - **Dashboard Components** on 21st.dev — 30+ dashboard patterns
+- **Steal this:** Add draggable widget reordering and a "compact" vs "comfortable" density toggle.
+- **Implementation note:** Use `@dnd-kit/sortable` for drag-and-drop. Store layout preference in localStorage.
 
 ### StatsCard
-- **Status:** Pending — Phase 5
-- **Inspiration found:** (same as DashboardPage results)
-- **Steal this:** Card with icon in colored background circle (top-left), label (text-sm text-zinc-500), large numeric value, optional change badge. Hover: subtle lift + border color change.
-- **Implementation note:** Props: `icon`, `label`, `value`, `change?`, `changeType?: "positive" | "negative"`, `color`. Pattern: `<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 hover:border-zinc-700 transition-all">`.
+- **Status:** Existing — improve
+- **Current:** Stat card with Lucide icon, label, animated numeric value (react-countup)
+- **Inspiration found:**
+  - **Statistics Card 13** by sean0205 (21st.dev) — Key metrics with unique layouts, data visualizations
+  - **Stats Card** by kavikatiyar (21st.dev) — Animated activity stats with bar chart
+  - **Animated Dashboard Card** by isaiahbjork (21st.dev) — Hover animations, trend indicators
+- **Steal this:** Add sparkline mini-charts showing trend over last 7 days and percentage change indicators.
+- **Implementation note:** Use `recharts` Sparkline component for the mini-chart. Add color-coded arrows (green/red) for positive/negative trends.
 
 ### ConnectionStatus
-- **Status:** Pending — Phase 5
+- **Status:** Existing — improve
+- **Current:** Green/red dot indicator + status text, links to `/whatsapp`
 - **Inspiration found:**
-  - **Status** (compound) — `Status`/`StatusIndicator`/`StatusLabel` compound component. StatusIndicator has a pinging animation (`animate-ping`) behind a solid dot using absolute positioning. Group-based status coloring: `group-[.online]:bg-emerald-500`.
-  - **StatusBadge** — Split badge with left icon + label and right icon + label separated by a divider line. Uses `cva` for variant styling.
-  - **BadgeDot** — Simple `size-1.5 rounded-full bg-[currentColor] opacity-75` dot pattern.
-- **Steal this:** Use the ping animation pattern for the connected state — a pulsing emerald dot behind the solid dot. For disconnected, use a static red dot. Wrap in a Badge-like container.
-- **Implementation note:** `<span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" /></span>` for connected. Static `bg-red-500` for disconnected. Wrap with label in a `flex items-center gap-2` container.
+  - **Status indicators** — Pulsing dots, connection strength bars
+  - **Integrations Component** by meschacirung (21st.dev) — Connected/disconnected states
+- **Steal this:** Add connection health history sparkline (last 24 hours) and reconnect button on error.
+- **Implementation note:** Use `recharts` for the sparkline. Animate status change with `framer-motion` color transition.
 
 ### RecentMessages
-- **Status:** Pending — Phase 5
-- **Steal this:** Simple list with avatar/icon placeholder, contact name, truncated message preview, relative timestamp ("2m ago"). Separator between items. "View all" link at bottom.
-- **Implementation note:** `<ul className="divide-y divide-zinc-800">` with list items showing `<div className="flex items-center gap-3 py-3">`. Use `<span className="text-xs text-zinc-500">` for timestamps. Truncate message with `truncate max-w-[200px]`.
+- **Status:** Existing — improve
+- **Current:** Last 5 messages — contact names, relative timestamps, dividers, campaign link
+- **Inspiration found:**
+  - **Activity Feed** patterns — Avatar + content + timestamp layout
+  - **List Components** on 21st.dev — Various list layouts with hover effects
+- **Steal this:** Add message status icons (sent/delivered/failed) and inline reply action on hover.
+- **Implementation note:** Use `lucide-react` for status icons. Add `group-hover` for the reply button visibility.
 
 ### QuickActions
-- **Status:** Pending — Phase 5
-- **Steal this:** Horizontal button group or card grid with icon + label for each action. Link to /send, /campaigns, /contacts. Use outline/ghost button style to not compete with the primary content.
-- **Implementation note:** `<div className="flex gap-3">` with `<Link>` buttons: `className="flex items-center gap-2 px-4 py-3 bg-zinc-800/50 border border-zinc-800 rounded-lg hover:bg-zinc-800 transition-colors"`.
-
----
-
-## Batch 6 — Polish (pending — define patterns)
-
-### LandingPage
-- **Status:** Pending — Phase 6
+- **Status:** Existing — improve
+- **Current:** Button group linking to Send Message, Bulk Send, View Contacts
 - **Inspiration found:**
-  - **SaaS Template** — Full dark landing with fixed navbar (logo + nav links + sign in/up), hero section with announcement badge ("New version!"), gradient text heading, subtitle, single CTA, dashboard screenshot with glow effect behind it.
-  - **Hero Landing Page (Turing)** — Video background hero, massive headline (80px), subtitle, dual CTAs (primary gradient + ghost), stat counters (40+ Industries, 3M+ Professionals).
-  - **HeroSection Enterprise** — Clean hero with feature badge (Zap icon + "Enterprise Grade"), heading with colored span, subtitle, dual CTAs (primary + outline), trust line below.
-- **Steal this:** Dark background with the SaaS Template pattern. Announcement badge at top ("Now with WhatsApp Business API"). Large gradient-text heading. Two CTAs: "Get Started" (emerald gradient) + "Learn More" (ghost). Dashboard screenshot below with glow effect. Trust badges or stats section.
-- **Implementation note:** Structure: `<section className="min-h-screen flex flex-col items-center justify-center px-6 py-20">`. Badge: `<aside className="mb-8 inline-flex items-center gap-2 px-4 py-2 rounded-full border border-zinc-700 bg-zinc-800/50">`. Heading: `style={{ background: "linear-gradient(to bottom, #fff, rgba(255,255,255,0.6))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}`. Dashboard screenshot: place below with absolute glow `bg-emerald-500/20 blur-3xl` behind it.
-
-### NotFoundPage
-- **Status:** Pending — Phase 6
-- **Inspiration found:**
-  - **404 Page Not Found** — SVG illustration (animated GIF from Dribbble), large "404" heading, "Look like you're lost" subtitle, "Go to Home" button.
-  - **404 Page (minimal)** — SVG tree/plant illustration, "Page Not Found" text, subtitle, "Return Home" button with arrow icon.
-  - **Error 404 Page** — SVG wave background, large "404" in white, friendly message, "Return Home" link.
-- **Steal this:** Keep it simple. Large "404" heading, friendly subtitle ("This page wandered off"), emerald "Go Home" button. Optional: a simple Lucide icon composition (MessageSquare + a question mark) instead of a heavy SVG illustration.
-- **Implementation note:** `<div className="flex flex-col items-center justify-center min-h-[60vh] text-center">`. `<h1 className="text-8xl font-bold text-zinc-700 mb-4">404</h1>`. `<p className="text-xl text-zinc-400 mb-8">This page doesn't exist</p>`. `<Link to="/dashboard" className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg">Go Home</Link>`.
-
-### ErrorBoundary
-- **Status:** Pending — Phase 6
-- **Steal this:** Centered error card with red-tinted icon, "Something went wrong" heading, error message (if available), "Try again" button that calls `this.setState({ hasError: false })`.
-- **Implementation note:** Class component with `componentDidCatch`. Fallback UI: same card pattern as DeleteConfirmDialog but with `AlertTriangle` in red and a retry button.
+  - **Quick Actions** patterns — Icon buttons with labels, grid layout
+  - **Button Groups** on 21st.dev — Various button arrangements
+- **Steal this:** Convert to a 2x2 grid of action cards with icons, titles, and descriptions.
+- **Implementation note:** Use card-based layout with hover lift effect (`hover:shadow-lg hover:-translate-y-1`).
 
 ### LoadingSkeleton
-- **Status:** Pending — Phase 6
-- **Inspiration found:** Skeleton components use `animate-pulse` on `bg-zinc-800` rounded shapes mimicking the layout they replace. Key pattern: match the exact dimensions of the content being loaded.
-- **Steal this:** Create skeletons that match each page's layout. Table skeleton = header bar + 5 rows of alternating width bars. Card skeleton = icon circle + 2 text bars. Use `bg-zinc-800 animate-pulse rounded`.
-- **Implementation note:** `<div className="bg-zinc-800 animate-pulse rounded-lg h-4 w-32" />` for text lines. `<div className="bg-zinc-800 animate-pulse rounded-full h-10 w-10" />` for icons. Create `SkeletonTable`, `SkeletonCard`, `SkeletonPage` variants.
-
-### MobileNav
-- **Status:** Pending — Phase 6
-- **Inspiration found:** SaaS Template Navigation — hamburger/X toggle, slide-down menu with `animate-[slideDown_0.3s]`, nav links + sign in/up in a vertical stack, `bg-black/95 backdrop-blur-md` overlay.
-- **Steal this:** Hamburger icon that toggles to X, slide-down panel with vertical nav links + logout button. Use the same nav items from the sidebar.
-- **Implementation note:** `<Sheet>` pattern (if using shadcn later) or a simple `{mobileOpen && <div className="md:hidden fixed inset-0 top-16 bg-zinc-950/95 backdrop-blur-md z-40">}` with vertical link stack inside.
-
-### ResponsiveContactTable
-- **Status:** Pending — Phase 6
-- **Steal this:** On mobile (<768px), render contacts as cards instead of table rows. Each card shows name, phone (monospace), status badge, and action buttons in a compact vertical layout.
-- **Implementation note:** Use `useMediaQuery` or Tailwind `md:hidden`/`hidden md:block` to switch between ContactTable and a card-based layout. Card: `<div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 space-y-2">` with name + status on first row, phone on second, actions on third.
+- **Status:** Existing — improve
+- **Current:** Skeleton shimmer loading states for pages
+- **Inspiration found:**
+  - **Skeleton Shimmer** on Motion.dev — AnimateView transitions from skeleton to content
+  - **shimmer-from-structure** library — Structure-aware skeleton loaders
+- **Steal this:** Use content-aware skeletons that match the layout of the actual content (cards, table rows, etc.).
+- **Implementation note:** Create specific skeleton components: `StatsCardSkeleton`, `TableRowSkeleton`, `ContactCardSkeleton`. Use `animate-pulse` with `bg-gray-200`.
 
 ---
 
-## Cross-Cutting Recommendations
+## Batch 6 — Polish & Extras
 
-### 1. shadcn/ui adoption strategy (Phase 5+)
+### MobileNav
+- **Status:** Pending — to build
+- **Inspiration found:**
+  - **Navigation Menus** on 21st.dev — 11+ mobile navigation patterns
+  - **Sheet/Drawer** patterns — Bottom sheet, side drawer
+- **Steal this:** Use a bottom sheet drawer for mobile navigation with swipe-to-dismiss.
+- **Implementation note:** Use `framer-motion` `drag` prop for swipe gesture. Implement `Sheet` component from scratch or use `@radix-ui/react-dialog`.
 
-Don't install shadcn/ui mid-phase. The current custom components are functional
-and consistent. When Phase 5 (Dashboard rewrite) begins, introduce shadcn primitives:
+### ResponsiveContactTable
+- **Status:** Pending — to build
+- **Inspiration found:**
+  - **Responsive tables** — Card layout on mobile, horizontal scroll
+  - **Data Tables** patterns — Collapsible row details on mobile
+- **Steal this:** Convert table to card grid on mobile (<640px) with expandable row details.
+- **Implementation note:** Use CSS Grid for card layout. Add `useMediaQuery` hook to toggle between table and card views.
 
-| Primitive | Replaces | Why bother |
-|-----------|----------|------------|
-| Dialog | Custom modal overlay | Focus trap, Esc handling, animate-in/out, `DialogDescription` for a11y |
-| Badge | Custom status `<span>` | Variant system, consistent sizing, theme-aware |
-| Progress | Custom progress bar | Radix `translateX` animation, accessible `progressbar` role |
-| Skeleton | Custom `animate-pulse` divs | Standardized shapes, consistent timing |
-| Slider | `<input type="range">` | Thumb styling, tooltip on drag, dual-value |
-| RadioGroup | Custom radio inputs | Keyboard navigation, Radix accessibility |
+---
 
-**Don't install:** Button, Input, Label — the current custom classes are fine
-and introducing shadcn primitives for these would mean touching every file.
+## Top 5 Global Improvements
 
-### 2. Animation strategy
+### 1. Consistent Animation Language
+Use `framer-motion` consistently across all components. Define a `transition` preset object:
+```typescript
+const transitions = {
+  default: { duration: 0.2, ease: "easeOut" },
+  spring: { type: "spring", stiffness: 300, damping: 30 },
+  slow: { duration: 0.5, ease: [0.4, 0, 0.2, 1] }
+};
+```
 
-**Tier A — CSS only (now, zero dependencies):**
-- `transition-colors duration-150` on all interactive elements (already done)
-- `animate-pulse` for skeletons and loading states (already done)
-- `animate-ping` for ConnectionStatus indicator (new, CSS-only)
-- Active nav `border-b-2` transition (new, CSS-only)
+### 2. Dark Mode Polish
+Ensure all components have proper dark mode contrast. Use CSS variables for theme colors:
+```css
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f4f6;
+  --text-primary: #111827;
+}
+.dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --text-primary: #f8fafc;
+}
+```
 
-**Tier B — framer-motion (Phase 5+, when adding it won't feel premature):**
-- Login/Register card entrance (`motion.div`, opacity+y)
-- Dialog open/close (zoom-in-95 + fade)
-- File upload drop zone (scale on drag)
-- Campaign progress number counting (spring animation)
+### 3. Micro-interactions
+Add hover states, focus rings, and active states to all interactive elements:
+```typescript
+// Button with all states
+<button className="
+  transition-all duration-200
+  hover:shadow-md hover:-translate-y-0.5
+  active:translate-y-0
+  focus:ring-2 focus:ring-offset-2
+  disabled:opacity-50 disabled:cursor-not-allowed
+">
+```
 
-**Don't install framer-motion just for login animations.** Wait until you have
-3+ components that need orchestrated motion. Until then, CSS `@keyframes` is fine.
+### 4. Loading States
+Replace all `Loading...` text with content-aware skeletons. Use `Suspense` boundaries with fallbacks.
 
-### 3. Bundle considerations
+### 5. Typography Scale
+Establish consistent typography hierarchy:
+- Display: 48px/700 (Landing page headlines)
+- H1: 32px/700 (Page titles)
+- H2: 24px/600 (Section headers)
+- H3: 20px/600 (Card titles)
+- Body: 16px/400 (Main text)
+- Small: 14px/400 (Secondary text)
+- Caption: 12px/500 (Labels, timestamps)
 
-| Package | Size | When to add | Why wait |
-|---------|------|-------------|----------|
-| framer-motion | ~32KB gzip | Phase 5 | Only 2 components benefit now |
-| react-countup | ~4KB gzip | Phase 5 | Only dashboard uses it |
-| @tanstack/react-table | ~14KB gzip | Never | Convex handles pagination server-side; simple sort is cheaper than a table library |
-| @radix-ui/* | ~2-4KB each | Phase 5 | shadcn dependency, install together |
+---
 
-### 4. Design tokens (already defined above)
+## External Resources
 
-See **Design System Foundation** section at the top. Every "steal this" pattern
-in this document should be filtered through those tokens. If an inspiration uses
-`rounded-2xl` but our system uses `rounded-xl` for cards — use `rounded-xl`.
+### 21st.dev Components to Explore
+- [Statistics Card 13](https://21st.dev/community/components/sean0205/statistics-card-13)
+- [Animated Dashboard Card](https://21st.dev/community/components/isaiahbjork/animated-dashboard-card)
+- [Background Gradient Animation](https://21st.dev/aceternity/background-gradient-animation)
+- [Animated Gradient Button](https://21st.dev/community/components/chowlol202/animated-gradient-button)
+- [Dashboard with Collapsible Sidebar](https://21st.dev/community/components/uniquesonu/dashboard-with-collapsible-sidebar)
+- [File Upload](https://21st.dev/community/components/anubra266/file-upload-1)
+- [Dropzone](https://21st.dev/community/components/haydenbleasel/dropzone)
+- [Multi-step Wizard](https://21st.dev/community/components/dhileepkumargm/multi-step-wizard)
+- [Progress Card](https://21st.dev/community/components/lavikatiyar/progress-card)
+- [Hero Landing Page](https://21st.dev/community/components/minhxthanh/hero-landing-page)
 
-### 5. What NOT to do
+### Libraries to Consider
+- **recharts** — For dashboard sparklines and campaign throughput graphs
+- **fuse.js** — For fuzzy search in comboboxes
+- **emoji-picker-react** — For message composer emoji support
+- **@dnd-kit/sortable** — For draggable dashboard widgets
+- **react-window** — For table virtualization with large datasets
 
-- **Don't add social login buttons** to LoginPage/RegisterPage — we use email/password via Convex Auth. The inspiration showed them but they're irrelevant.
-- **Don't add rich text formatting** to SendMessagePage — WhatsApp is plain text. The Composer Input inspiration is for email/chat apps.
-- **Don't split Name into first/last** on RegisterPage — the Convex auth profile callback uses a single `name` field. Splitting it means changing the schema for no user benefit.
-- **Don't add sparkline charts** to dashboard stat cards — we don't have time-series data from Convex. Show the number, not a fake chart.
-- **Don't replace the current "Load more" with numbered pagination** — Convex `usePaginatedQuery` is cursor-based, not offset-based. "Load more" is the correct pattern. Improve its visual treatment instead.
+---
+
+*Last updated: 2026-03-23*

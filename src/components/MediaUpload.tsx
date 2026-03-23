@@ -1,8 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Loader2, FileVideo, File, X, Upload, Music } from "lucide-react";
-import { motion } from "framer-motion";
+import { 
+  Loader2, 
+  FileVideo, 
+  Upload, 
+  Music, 
+  Image as ImageIcon,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Trash2
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { Id } from "@convex/_generated/dataModel";
 
 type MediaType = "image" | "video" | "document" | "audio";
@@ -22,6 +32,9 @@ const MAX_FILE_SIZES: Record<MediaType, number> = {
 };
 
 function formatSize(bytes: number): string {
+  if (bytes < 1024 * 1024) {
+    return `${Math.round(bytes / 1024)}KB`;
+  }
   return `${Math.round(bytes / (1024 * 1024))}MB`;
 }
 
@@ -37,15 +50,21 @@ const ACCEPTED_TYPES = [
   "audio/ogg",
 ];
 
+const MEDIA_CONFIG: Record<MediaType, { icon: typeof ImageIcon; color: string; bg: string; label: string }> = {
+  image: { icon: ImageIcon, color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Image" },
+  video: { icon: FileVideo, color: "text-violet-400", bg: "bg-violet-500/10", label: "Video" },
+  audio: { icon: Music, color: "text-amber-400", bg: "bg-amber-500/10", label: "Audio" },
+  document: { icon: FileText, color: "text-blue-400", bg: "bg-blue-500/10", label: "Document" },
+};
+
 function MediaIcon({ mediaType }: { mediaType: MediaType }) {
-  switch (mediaType) {
-    case "video":
-      return <FileVideo className="w-5 h-5 text-violet-400" />;
-    case "audio":
-      return <Music className="w-5 h-5 text-amber-400" />;
-    default:
-      return <File className="w-5 h-5 text-zinc-400" />;
-  }
+  const config = MEDIA_CONFIG[mediaType];
+  const Icon = config.icon;
+  return (
+    <div className={`w-10 h-10 rounded-xl ${config.bg} flex items-center justify-center`}>
+      <Icon className={`w-5 h-5 ${config.color}`} />
+    </div>
+  );
 }
 
 interface MediaUploadProps {
@@ -54,142 +73,173 @@ interface MediaUploadProps {
     mediaType: MediaType;
     fileName: string;
   }) => void;
+  label?: string;
 }
 
-export function MediaUpload({ onUpload }: MediaUploadProps) {
+interface UploadFile {
+  file: File;
+  id: string;
+  progress: number;
+  status: "pending" | "uploading" | "completed" | "error";
+  thumbnailUrl?: string;
+  error?: string;
+}
+
+export function MediaUpload({ onUpload, label = "Attach Media" }: MediaUploadProps) {
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [files, setFiles] = useState<UploadFile[]>([]);
   const [error, setError] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploaded, setUploaded] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // Clean up thumbnail object URL
+  // Clean up thumbnail object URLs
   useEffect(() => {
     return () => {
-      if (thumbnailUrl) URL.revokeObjectURL(thumbnailUrl);
+      files.forEach(f => {
+        if (f.thumbnailUrl) URL.revokeObjectURL(f.thumbnailUrl);
+      });
     };
-  }, [thumbnailUrl]);
+  }, []);
 
-  const validateAndProcess = useCallback(
-    (file: File) => {
-      setError("");
-      setUploaded(false);
-
-      if (!ACCEPTED_TYPES.includes(file.type)) {
-        setError("Unsupported file type.");
-        setSelectedFile(null);
-        return;
-      }
-
-      const mediaType = getMediaType(file.type);
-      const maxSize = MAX_FILE_SIZES[mediaType];
-      if (file.size > maxSize) {
-        setError(
-          `File too large. Max size for ${mediaType}s is ${formatSize(maxSize)}.`,
-        );
-        setSelectedFile(null);
-        return;
-      }
-
-      // Clean up previous thumbnail
-      if (thumbnailUrl) URL.revokeObjectURL(thumbnailUrl);
-
-      // Create thumbnail for images
+  const generateThumbnail = useCallback((file: File, mediaType: MediaType): Promise<string | undefined> => {
+    return new Promise((resolve) => {
       if (mediaType === "image") {
-        setThumbnailUrl(URL.createObjectURL(file));
+        resolve(URL.createObjectURL(file));
       } else if (mediaType === "video") {
-        // Generate video thumbnail from first frame
         const videoEl = document.createElement("video");
         videoEl.preload = "metadata";
         videoEl.muted = true;
         const videoUrl = URL.createObjectURL(file);
         videoEl.src = videoUrl;
-        videoEl.currentTime = 1; // seek to 1 second
-        videoEl.addEventListener(
-          "seeked",
-          () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = 80;
-            canvas.height = 80;
-            const ctx = canvas.getContext("2d");
-            if (ctx) {
-              const scale = Math.max(
-                80 / videoEl.videoWidth,
-                80 / videoEl.videoHeight,
-              );
-              const w = videoEl.videoWidth * scale;
-              const h = videoEl.videoHeight * scale;
-              ctx.drawImage(videoEl, (80 - w) / 2, (80 - h) / 2, w, h);
-              setThumbnailUrl(canvas.toDataURL("image/jpeg", 0.7));
-            }
-            URL.revokeObjectURL(videoUrl);
-          },
-          { once: true },
-        );
-        videoEl.addEventListener(
-          "error",
-          () => {
-            URL.revokeObjectURL(videoUrl);
-            setThumbnailUrl(null);
-          },
-          { once: true },
-        );
+        videoEl.currentTime = 1;
+        
+        videoEl.addEventListener("seeked", () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 120;
+          canvas.height = 120;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            const scale = Math.max(120 / videoEl.videoWidth, 120 / videoEl.videoHeight);
+            const w = videoEl.videoWidth * scale;
+            const h = videoEl.videoHeight * scale;
+            ctx.drawImage(videoEl, (120 - w) / 2, (120 - h) / 2, w, h);
+            resolve(canvas.toDataURL("image/jpeg", 0.7));
+          }
+          URL.revokeObjectURL(videoUrl);
+        }, { once: true });
+        
+        videoEl.addEventListener("error", () => {
+          URL.revokeObjectURL(videoUrl);
+          resolve(undefined);
+        }, { once: true });
       } else {
-        setThumbnailUrl(null);
+        resolve(undefined);
+      }
+    });
+  }, []);
+
+  const validateAndProcess = useCallback(
+    async (fileList: FileList) => {
+      setError("");
+      const newFiles: UploadFile[] = [];
+
+      for (const file of Array.from(fileList)) {
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+          setError(`"${file.name}" has an unsupported file type.`);
+          continue;
+        }
+
+        const mediaType = getMediaType(file.type);
+        const maxSize = MAX_FILE_SIZES[mediaType];
+        if (file.size > maxSize) {
+          setError(`"${file.name}" is too large. Max size for ${mediaType}s is ${formatSize(maxSize)}.`);
+          continue;
+        }
+
+        const thumbnailUrl = await generateThumbnail(file, mediaType);
+        
+        const uploadFile: UploadFile = {
+          file,
+          id: Math.random().toString(36).substr(2, 9),
+          progress: 0,
+          status: "pending",
+          thumbnailUrl,
+        };
+        
+        newFiles.push(uploadFile);
+        
+        // Start upload immediately
+        void uploadSingleFile(uploadFile);
       }
 
-      setSelectedFile(file);
-
-      // Auto-upload immediately
-      void uploadFile(file);
+      setFiles(prev => [...prev, ...newFiles]);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [thumbnailUrl],
+    [generateThumbnail],
   );
 
-  const uploadFile = async (file: File) => {
-    setIsUploading(true);
-    setError("");
+  const uploadSingleFile = async (uploadFile: UploadFile) => {
+    setFiles(prev => prev.map(f => 
+      f.id === uploadFile.id ? { ...f, status: "uploading" } : f
+    ));
+
     try {
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setFiles(prev => prev.map(f => {
+          if (f.id === uploadFile.id && f.progress < 90) {
+            return { ...f, progress: f.progress + 10 };
+          }
+          return f;
+        }));
+      }, 200);
+
       const uploadUrl = await generateUploadUrl();
       const res = await fetch(uploadUrl, {
         method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
+        headers: { "Content-Type": uploadFile.file.type },
+        body: uploadFile.file,
       });
+
+      clearInterval(progressInterval);
 
       if (!res.ok) throw new Error("Upload failed");
 
       const { storageId } = await res.json();
-      setUploaded(true);
+      
+      setFiles(prev => prev.map(f => 
+        f.id === uploadFile.id 
+          ? { ...f, progress: 100, status: "completed" } 
+          : f
+      ));
+
       onUpload({
         storageId,
-        mediaType: getMediaType(file.type),
-        fileName: file.name,
+        mediaType: getMediaType(uploadFile.file.type),
+        fileName: uploadFile.file.name,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setIsUploading(false);
+      setFiles(prev => prev.map(f => 
+        f.id === uploadFile.id 
+          ? { ...f, status: "error", error: err instanceof Error ? err.message : "Upload failed" } 
+          : f
+      ));
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    validateAndProcess(file);
+    const fileList = e.target.files;
+    if (!fileList?.length) return;
+    void validateAndProcess(fileList);
+    e.target.value = ""; // Reset input
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) validateAndProcess(file);
+    const fileList = e.dataTransfer.files;
+    if (fileList.length) void validateAndProcess(fileList);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -209,30 +259,37 @@ export function MediaUpload({ onUpload }: MediaUploadProps) {
     setIsDragOver(false);
   };
 
-  const handleRemove = () => {
-    if (thumbnailUrl) URL.revokeObjectURL(thumbnailUrl);
-    setThumbnailUrl(null);
-    setSelectedFile(null);
-    setError("");
-    setUploaded(false);
-    if (inputRef.current) inputRef.current.value = "";
+  const handleRemove = (id: string) => {
+    setFiles(prev => {
+      const file = prev.find(f => f.id === id);
+      if (file?.thumbnailUrl) URL.revokeObjectURL(file.thumbnailUrl);
+      return prev.filter(f => f.id !== id);
+    });
+  };
+
+  const handleRetry = (uploadFile: UploadFile) => {
+    setFiles(prev => prev.map(f => 
+      f.id === uploadFile.id 
+        ? { ...f, status: "uploading", progress: 0, error: undefined } 
+        : f
+    ));
+    void uploadSingleFile(uploadFile);
   };
 
   return (
-    <div className="space-y-2">
-      <label
-        htmlFor="media-upload"
-        className="block text-sm font-medium text-zinc-300"
-      >
-        Attach Media
-      </label>
+    <div className="space-y-3">
+      {label && (
+        <label className="block text-sm font-medium text-zinc-300">
+          {label}
+        </label>
+      )}
 
       {/* Drop zone */}
       <motion.div
         role="button"
         tabIndex={0}
-        whileHover={{ scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
+        whileHover={{ scale: 1.005 }}
+        whileTap={{ scale: 0.995 }}
         onClick={() => inputRef.current?.click()}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
@@ -241,83 +298,183 @@ export function MediaUpload({ onUpload }: MediaUploadProps) {
         onDragOver={handleDragOver}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
-        className={`flex flex-col items-center justify-center gap-2 p-6 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+        className={`relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed cursor-pointer transition-all overflow-hidden ${
           isDragOver
             ? "border-emerald-500 bg-emerald-500/5"
-            : "border-zinc-700 hover:border-zinc-500"
+            : "border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800/30"
         }`}
       >
-        <Upload className="w-6 h-6 text-zinc-500" />
-        <p className="text-sm text-zinc-400">
-          Drag & drop files here or click to browse
-        </p>
-        <p className="text-xs text-zinc-500">
-          Images up to 10MB &middot; Videos up to 50MB &middot; Docs &amp; audio
-          up to 20MB
-        </p>
+        {/* Background animation on drag over */}
+        <AnimatePresence>
+          {isDragOver && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="absolute inset-0 bg-emerald-500/5"
+            />
+          )}
+        </AnimatePresence>
+
+        <div className="relative">
+          <motion.div
+            animate={isDragOver ? { y: [0, -5, 0] } : {}}
+            transition={{ duration: 0.5, repeat: isDragOver ? Infinity : 0 }}
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
+              isDragOver ? "bg-emerald-500/20" : "bg-zinc-800"
+            }`}
+          >
+            <Upload className={`w-6 h-6 transition-colors ${
+              isDragOver ? "text-emerald-400" : "text-zinc-500"
+            }`} />
+          </motion.div>
+        </div>
+        
+        <div className="text-center">
+          <p className={`text-sm font-medium transition-colors ${
+            isDragOver ? "text-emerald-400" : "text-zinc-300"
+          }`}>
+            {isDragOver ? "Drop files here" : "Drag & drop files here"}
+          </p>
+          <p className="text-xs text-zinc-500 mt-1">
+            or click to browse
+          </p>
+        </div>
+        
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+          {[
+            { icon: ImageIcon, label: "Images", limit: "10MB" },
+            { icon: FileVideo, label: "Videos", limit: "50MB" },
+            { icon: FileText, label: "Docs", limit: "20MB" },
+          ].map(({ icon: Icon, label, limit }) => (
+            <div key={label} className="flex items-center gap-1 px-2 py-1 bg-zinc-800/50 rounded-lg">
+              <Icon className="w-3 h-3 text-zinc-500" />
+              <span className="text-[10px] text-zinc-500">{label} {limit}</span>
+            </div>
+          ))}
+        </div>
       </motion.div>
 
       <input
         ref={inputRef}
         id="media-upload"
         type="file"
+        multiple
         accept={ACCEPTED_TYPES.join(",")}
         onChange={handleFileChange}
         className="hidden"
-        aria-label="Attach Media"
+        aria-label={label}
       />
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
-
-      {selectedFile && (
-        <div className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg border border-zinc-700">
-          {thumbnailUrl ? (
-            <img
-              src={thumbnailUrl}
-              alt={`Thumbnail of ${selectedFile.name}`}
-              className="w-12 h-12 rounded object-cover"
-            />
-          ) : (
-            <MediaIcon mediaType={getMediaType(selectedFile.type)} />
-          )}
-          <span className="text-sm text-zinc-300 flex-1 truncate">
-            {selectedFile.name}
-          </span>
-          <span className="text-xs text-zinc-500">
-            {(selectedFile.size / 1024 / 1024).toFixed(1)} MB
-          </span>
-
-          {isUploading && (
-            <span className="flex items-center gap-1 text-xs text-zinc-400">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Uploading...
-            </span>
-          )}
-
-          {uploaded && (
-            <span className="text-xs text-emerald-400 font-medium">
-              Uploaded ✓
-            </span>
-          )}
-
-          {error && !isUploading && !uploaded && (
-            <button
-              onClick={() => void uploadFile(selectedFile)}
-              className="px-2 py-1 text-xs text-red-400 hover:text-red-300 transition-colors"
-            >
-              Retry
-            </button>
-          )}
-
-          <button
-            onClick={handleRemove}
-            className="p-1 text-zinc-500 hover:text-red-400 transition-colors"
-            aria-label="Remove"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl"
+        >
+          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+          <p className="text-sm text-red-400">{error}</p>
+        </motion.div>
       )}
+
+      {/* File list */}
+      <AnimatePresence mode="popLayout">
+        {files.map((uploadFile) => {
+          const mediaType = getMediaType(uploadFile.file.type);
+          const config = MEDIA_CONFIG[mediaType];
+          
+          return (
+            <motion.div
+              key={uploadFile.id}
+              layout
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="group flex items-center gap-4 p-3 bg-zinc-800/50 rounded-xl border border-zinc-700/50 hover:border-zinc-700 transition-colors"
+            >
+              {/* Thumbnail or icon */}
+              <div className="relative flex-shrink-0">
+                {uploadFile.thumbnailUrl ? (
+                  <div className="relative w-14 h-14 rounded-lg overflow-hidden">
+                    <img
+                      src={uploadFile.thumbnailUrl}
+                      alt={`Thumbnail of ${uploadFile.file.name}`}
+                      className="w-full h-full object-cover"
+                    />
+                    {uploadFile.status === "uploading" && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <Loader2 className="w-5 h-5 text-white animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <MediaIcon mediaType={mediaType} />
+                )}
+              </div>
+
+              {/* File info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-zinc-200 truncate">
+                  {uploadFile.file.name}
+                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-zinc-500">
+                    {formatSize(uploadFile.file.size)}
+                  </span>
+                  <span className="text-xs text-zinc-600">•</span>
+                  <span className={`text-xs ${config.color}`}>
+                    {config.label}
+                  </span>
+                </div>
+                
+                {/* Progress bar */}
+                {uploadFile.status === "uploading" && (
+                  <div className="mt-2">
+                    <div className="h-1 bg-zinc-700 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${uploadFile.progress}%` }}
+                        className="h-full bg-emerald-500 rounded-full"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Status */}
+              <div className="flex items-center gap-2">
+                {uploadFile.status === "completed" && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="flex items-center gap-1 text-xs text-emerald-400 font-medium"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Done</span>
+                  </motion.div>
+                )}
+
+                {uploadFile.status === "error" && (
+                  <button
+                    onClick={() => handleRetry(uploadFile)}
+                    className="px-3 py-1.5 text-xs font-medium text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors"
+                  >
+                    Retry
+                  </button>
+                )}
+
+                <button
+                  onClick={() => handleRemove(uploadFile.id)}
+                  className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                  aria-label="Remove"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
     </div>
   );
 }

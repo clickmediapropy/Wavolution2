@@ -1,8 +1,73 @@
 import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { MessageSquare, CheckCircle2, XCircle } from "lucide-react";
+import { MessageSquare, CheckCircle2, XCircle, Clock, RotateCcw, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { relativeTime } from "@/lib/relativeTime";
+
+const statusIcons = {
+  sent: { icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Delivered" },
+  failed: { icon: XCircle, color: "text-red-400", bg: "bg-red-500/10", label: "Failed" },
+  pending: { icon: Clock, color: "text-amber-400", bg: "bg-amber-500/10", label: "Pending" },
+};
+
+function MessageItem({ msg, contactName }: { msg: any; contactName?: string }) {
+  const status = msg.status as keyof typeof statusIcons;
+  const statusConfig = statusIcons[status] || statusIcons.pending;
+  const StatusIcon = statusConfig.icon;
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="group flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-zinc-800/50 transition-colors cursor-pointer"
+    >
+      {/* Status indicator */}
+      <div className={`w-8 h-8 rounded-lg ${statusConfig.bg} flex items-center justify-center flex-shrink-0`}>
+        <StatusIcon className={`w-4 h-4 ${statusConfig.color}`} />
+      </div>
+      
+      {/* Contact info */}
+      <div className="flex-1 min-w-0">
+        <span className="text-sm text-zinc-200 font-medium block truncate">
+          {contactName ?? msg.phone}
+        </span>
+        {contactName && (
+          <span className="text-xs text-zinc-500 block truncate">
+            {msg.phone}
+          </span>
+        )}
+      </div>
+      
+      {/* Message preview */}
+      <div className="hidden sm:block flex-[2] min-w-0">
+        <p className="text-sm text-zinc-400 truncate max-w-[200px]">
+          {msg.message}
+        </p>
+      </div>
+      
+      {/* Timestamp */}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className="text-xs text-zinc-500">
+          {relativeTime(msg._creationTime)}
+        </span>
+        
+        {/* Hover actions */}
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {status === "failed" && (
+            <button 
+              className="p-1.5 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+              title="Retry"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 export function RecentMessages() {
   const messages = usePaginatedQuery(
@@ -14,6 +79,7 @@ export function RecentMessages() {
   const contacts = useQuery(api.contacts.list, {
     paginationOpts: { numItems: 500, cursor: null },
   });
+  
   const phoneToName = new Map<string, string>();
   if (contacts?.page) {
     for (const c of contacts.page) {
@@ -23,58 +89,73 @@ export function RecentMessages() {
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <MessageSquare className="w-5 h-5 text-violet-400" />
-        <h2 className="text-sm font-medium text-zinc-300">Recent Messages</h2>
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-violet-500/10 rounded-xl">
+            <MessageSquare className="w-5 h-5 text-violet-400" />
+          </div>
+          <div>
+            <h2 className="text-h3 text-zinc-100">Recent Messages</h2>
+            <p className="text-small text-zinc-500">Last 5 messages sent</p>
+          </div>
+        </div>
+        
+        {/* Stats summary */}
+        {messages.results.length > 0 && (
+          <div className="hidden sm:flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-xs">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="text-zinc-400">
+                {messages.results.filter(m => m.status === "sent").length} delivered
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {messages.results.length === 0 ? (
-        <p className="text-sm text-zinc-500 text-center py-6">
-          No messages sent yet
-        </p>
-      ) : (
-        <div className="divide-y divide-zinc-800">
-          {messages.results.map((msg) => {
-            const contactName = phoneToName.get(msg.phone);
-            return (
-              <div key={msg._id} className="flex items-center gap-3 px-3 py-3">
-                {msg.status === "sent" ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                ) : (
-                  <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm text-zinc-300 block truncate">
-                    {contactName ?? msg.phone}
-                  </span>
-                  {contactName && (
-                    <span className="text-xs font-mono text-zinc-500 block truncate">
-                      {msg.phone}
-                    </span>
-                  )}
-                </div>
-                <span className="text-xs text-zinc-500 truncate max-w-[30%]">
-                  {msg.message}
-                </span>
-                <span className="text-xs text-zinc-600 flex-shrink-0">
-                  {relativeTime(msg._creationTime)}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {messages.results.length > 0 && (
-        <div className="pt-3 border-t border-zinc-800 mt-1">
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-zinc-800/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <MessageSquare className="w-8 h-8 text-zinc-600" />
+          </div>
+          <p className="text-zinc-400 font-medium">No messages sent yet</p>
+          <p className="text-sm text-zinc-500 mt-1">Start by sending your first message</p>
           <Link
-            to="/campaigns/new"
-            className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
+            to="/send"
+            className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            Send new campaign &rarr;
+            Send Message
+            <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
+      ) : (
+        <>
+          <div className="space-y-1">
+            <AnimatePresence>
+              {messages.results.map((msg) => (
+                <MessageItem 
+                  key={msg._id} 
+                  msg={msg} 
+                  contactName={phoneToName.get(msg.phone)} 
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+
+          <div className="pt-4 mt-4 border-t border-zinc-800 flex items-center justify-between">
+            <p className="text-xs text-zinc-500">
+              Showing last {messages.results.length} messages
+            </p>
+            <Link
+              to="/campaigns/new"
+              className="flex items-center gap-1 text-sm text-emerald-400 hover:text-emerald-300 font-medium transition-colors group"
+            >
+              New campaign
+              <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+          </div>
+        </>
       )}
     </div>
   );

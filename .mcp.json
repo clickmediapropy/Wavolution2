@@ -2,11 +2,18 @@
   "mcpServers": {
     "axiom": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://mcp.axiom.co/mcp"]
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.axiom.co/mcp"
+      ]
     },
     "magic": {
       "command": "npx",
-      "args": ["-y", "@21st-dev/magic@latest"]
+      "args": ["-y", "@21st-dev/magic@latest"],
+      "env": {
+        "API_KEY": "6a4547172866df755ceb61a0d200d8023f6b6bbef418117fbb29bcef8ea7302a"
+      }
     }
   }
 }
