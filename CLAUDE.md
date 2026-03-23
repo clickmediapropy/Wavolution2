@@ -100,7 +100,7 @@ Before starting any task, identify which category below it falls into and use th
 - **Deploy to prod:** `vp check` → `npx vitest run` → `vercel --prod` → `axiom-sre` (verify)
 
 ### Active Phase
-**Phase 2 (Contact Management)** — Focus: `convex-functions`, `convex-realtime` (pagination), `react-vite-best-practices`
+**Post-Phase 2 (Feature Parity)** — 12 features from message-hub added. Next: campaign worker on VPS.
 
 ## Architecture
 
@@ -133,7 +133,14 @@ src/
 ### Convex Backend
 ```
 convex/
-├── schema.ts                  # All tables: users (extended), contacts, messages, campaigns + authTables
+├── schema.ts                  # All tables: users (extended), contacts, messages, campaigns, instances + authTables
+├── contacts.ts                # CRUD, search, CSV import/export
+├── campaigns.ts               # Create, start, stop, pause, resume, list
+├── messages.ts                # Log, count, countToday, countRecent (rate limiting)
+├── evolution.ts               # Evolution API actions (instance mgmt, send text/media)
+├── instances.ts               # WhatsApp instance CRUD + connection state
+├── storage.ts                 # File upload URL generation + serving
+├── migrations.ts              # One-time data migrations (run via dashboard)
 ├── auth.config.ts             # OIDC issuer config (points to Convex site URL)
 ├── auth.ts                    # Password provider with custom profile callback
 ├── http.ts                    # HTTP routes for auth OIDC endpoints
@@ -149,9 +156,10 @@ convex/
 
 ### Convex Schema Tables
 - **users** — auth fields + app fields (evolutionInstanceName, whatsappConnected, etc.)
-- **contacts** — userId, phone, name, status, sentAt. Indexes: by_userId, by_userId_and_phone
+- **contacts** — userId, phone, firstName, lastName, status, sentAt. Indexes: by_userId, by_userId_and_phone, search_by_firstName
+- **instances** — userId, name, apiKey, whatsappConnected, whatsappNumber, connectionStatus. Indexes: by_userId, by_userId_and_name
 - **messages** — userId, campaignId, phone, message, status. Indexes: by_userId, by_campaignId
-- **campaigns** — userId, status, recipientType, total, processed, sent, failed, delay, messageTemplate, hasMedia, mediaStorageIds
+- **campaigns** — userId, status (draft|running|paused|completed|stopped), recipientType, total, processed, sent, failed, delay, messageTemplate, hasMedia, mediaStorageIds
 
 ### Testing Pattern
 - TDD: write tests first, watch fail, implement, watch pass
@@ -159,6 +167,14 @@ convex/
 - Mock `useAuthActions` via `vi.mock("@convex-dev/auth/react")`
 - Wrap components in `<MemoryRouter>` for routing tests
 - Use `fireEvent` from @testing-library/react (no userEvent installed)
+
+## Gotchas
+
+- **Schema field renames break push**: Renaming/removing a field in `convex/schema.ts` fails if existing DB docs have the old field. Keep deprecated fields as `v.optional()` + write a migration in `convex/migrations.ts`. Run via: `npx convex run --no-push internal.migrations.<name>`
+- **`.gitignore` blocks `*.csv`**: Public assets like `public/sample-contacts.csv` need `git add -f`
+- **DashboardPage test mocks are index-based**: `useQuery` mock returns by call index. Adding new queries shifts all subsequent mock returns — update the index map in the test.
+- **`getFullName()` helper**: Use `getFullName(contact)` from `src/lib/utils.ts` to display contact names. Handles firstName+lastName with fallback to deprecated `name` field.
+- **Campaign statuses**: `draft → running ↔ paused → stopped | completed`. The `stop` mutation accepts both running and paused.
 
 ## Key Files
 
