@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Loader2, FileVideo, File, X, Upload } from "lucide-react";
+import { motion } from "framer-motion";
 import type { Id } from "@convex/_generated/dataModel";
 
 const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16MB
@@ -175,9 +176,11 @@ export function MediaUpload({ onUpload }: MediaUploadProps) {
       </label>
 
       {/* Drop zone */}
-      <div
+      <motion.div
         role="button"
         tabIndex={0}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
         onClick={() => inputRef.current?.click()}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
@@ -199,7 +202,7 @@ export function MediaUpload({ onUpload }: MediaUploadProps) {
         <p className="text-xs text-zinc-500">
           Images, videos, audio, documents up to 16MB
         </p>
-      </div>
+      </motion.div>
 
       <input
         ref={inputRef}

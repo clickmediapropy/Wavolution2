@@ -2,6 +2,12 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { MediaUpload } from "@/components/MediaUpload";
 
+vi.mock("framer-motion", () => ({
+  motion: {
+    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  },
+}));
+
 const mockGenerateUploadUrl = vi.fn().mockResolvedValue("https://upload.url");
 
 vi.mock("convex/react", () => ({

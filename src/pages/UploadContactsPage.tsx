@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { parseCSV, chunk } from "@/lib/csv";
+import { motion } from "framer-motion";
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) {
@@ -154,9 +155,11 @@ export function UploadContactsPage() {
       <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 mb-6">
         <div className="space-y-4">
           {/* Drag-drop zone */}
-          <div
+          <motion.div
             role="button"
             tabIndex={0}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
             onClick={() => fileInputRef.current?.click()}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -183,7 +186,7 @@ export function UploadContactsPage() {
             <UploadCloud className="w-10 h-10 text-zinc-500 mx-auto mb-3" />
             <p className="text-zinc-300">Drag & drop your CSV file here</p>
             <p className="text-zinc-500 text-sm mt-1">or click to browse</p>
-          </div>
+          </motion.div>
 
           <input
             ref={fileInputRef}
