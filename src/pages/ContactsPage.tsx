@@ -145,17 +145,17 @@ export function ContactsPage() {
   }, []);
 
   return (
-    <div>
+    <div className="animate-fadeIn">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Users className="w-7 h-7 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
+          <Users className="w-7 h-7 text-emerald-500" />
+          <h1 className="text-2xl font-bold text-zinc-100">Contacts</h1>
         </div>
         <div className="flex items-center gap-3">
           <Link
             to="/contacts/upload"
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg hover:bg-zinc-700 transition-colors"
             aria-label="Upload CSV"
           >
             <Upload className="w-4 h-4" />
@@ -166,7 +166,7 @@ export function ContactsPage() {
               setAddError("");
               setAddDialogOpen(true);
             }}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 transition-colors"
             aria-label="Add Contact"
           >
             <Plus className="w-4 h-4" />
@@ -177,13 +177,13 @@ export function ContactsPage() {
 
       {/* Search */}
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
         <input
           type="text"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           placeholder="Search contacts by name..."
-          className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          className="w-full pl-10 pr-4 py-2.5 bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder:text-zinc-500 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none"
         />
       </div>
 

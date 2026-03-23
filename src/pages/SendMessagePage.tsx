@@ -91,7 +91,7 @@ export function SendMessagePage() {
   if (user === undefined) {
     return (
       <div role="status" className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
       </div>
     );
   }
@@ -99,19 +99,19 @@ export function SendMessagePage() {
   const canSend = selectedPhone && message.trim() && !isSending;
 
   return (
-    <div>
+    <div className="animate-fadeIn">
       <div className="flex items-center gap-3 mb-6">
-        <Send className="w-7 h-7 text-green-600" />
-        <h1 className="text-2xl font-bold text-gray-900">Send Message</h1>
+        <Send className="w-7 h-7 text-emerald-500" />
+        <h1 className="text-2xl font-bold text-zinc-100">Send Message</h1>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-2xl">
+      <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 max-w-2xl">
         <div className="space-y-4">
           {/* Contact Selector */}
           <div>
             <label
               htmlFor="contact-select"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-zinc-300 mb-1"
             >
               Select Contact
             </label>
@@ -119,7 +119,7 @@ export function SendMessagePage() {
               id="contact-select"
               value={selectedPhone}
               onChange={(e) => setSelectedPhone(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+              className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 text-zinc-100 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none"
               aria-label="Select Contact"
             >
               <option value="">Choose a contact...</option>
@@ -137,7 +137,7 @@ export function SendMessagePage() {
           <div>
             <label
               htmlFor="message-input"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-zinc-300 mb-1"
             >
               Message
             </label>
@@ -147,7 +147,7 @@ export function SendMessagePage() {
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
               placeholder="Type your message..."
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none resize-y"
+              className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder:text-zinc-500 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none resize-y"
               aria-label="Message"
             />
           </div>
@@ -160,7 +160,7 @@ export function SendMessagePage() {
             <button
               onClick={handleSend}
               disabled={!canSend}
-              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               aria-label="Send"
             >
               {isSending ? (

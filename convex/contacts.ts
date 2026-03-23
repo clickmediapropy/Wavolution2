@@ -16,6 +16,19 @@ async function getAuthedUserId(
   return userId;
 }
 
+// Count contacts for current user
+export const count = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthedUserId(ctx);
+    const contacts = await ctx.db
+      .query("contacts")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+    return contacts.length;
+  },
+});
+
 // Paginated contact list (newest first)
 export const list = query({
   args: { paginationOpts: paginationOptsValidator },

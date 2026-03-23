@@ -29,11 +29,11 @@ function getMediaType(mimeType: string): MediaType {
 function MediaIcon({ mediaType }: { mediaType: MediaType }) {
   switch (mediaType) {
     case "image":
-      return <FileImage className="w-5 h-5 text-blue-500" />;
+      return <FileImage className="w-5 h-5 text-emerald-400" />;
     case "video":
-      return <FileVideo className="w-5 h-5 text-purple-500" />;
+      return <FileVideo className="w-5 h-5 text-violet-400" />;
     default:
-      return <File className="w-5 h-5 text-gray-500" />;
+      return <File className="w-5 h-5 text-zinc-400" />;
   }
 }
 
@@ -114,7 +114,7 @@ export function MediaUpload({ onUpload }: MediaUploadProps) {
     <div className="space-y-2">
       <label
         htmlFor="media-upload"
-        className="block text-sm font-medium text-gray-700"
+        className="block text-sm font-medium text-zinc-300"
       >
         Attach Media
       </label>
@@ -125,19 +125,19 @@ export function MediaUpload({ onUpload }: MediaUploadProps) {
         type="file"
         accept={ACCEPTED_TYPES.join(",")}
         onChange={handleFileChange}
-        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+        className="block w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border file:border-zinc-700 file:text-sm file:font-medium file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700 cursor-pointer"
         aria-label="Attach Media"
       />
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
       {selectedFile && (
-        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg border border-zinc-700">
           <MediaIcon mediaType={getMediaType(selectedFile.type)} />
-          <span className="text-sm text-gray-700 flex-1 truncate">
+          <span className="text-sm text-zinc-300 flex-1 truncate">
             {selectedFile.name}
           </span>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-zinc-500">
             {(selectedFile.size / 1024 / 1024).toFixed(1)} MB
           </span>
 
@@ -145,7 +145,7 @@ export function MediaUpload({ onUpload }: MediaUploadProps) {
             <button
               onClick={handleUpload}
               disabled={isUploading}
-              className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="px-3 py-1 text-xs font-medium text-white bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 transition-colors"
             >
               {isUploading ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -156,14 +156,14 @@ export function MediaUpload({ onUpload }: MediaUploadProps) {
           )}
 
           {uploaded && (
-            <span className="text-xs text-green-600 font-medium">
+            <span className="text-xs text-emerald-400 font-medium">
               Uploaded
             </span>
           )}
 
           <button
             onClick={handleRemove}
-            className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+            className="p-1 text-zinc-500 hover:text-red-400 transition-colors"
             aria-label="Remove"
           >
             <X className="w-4 h-4" />
@@ -171,7 +171,7 @@ export function MediaUpload({ onUpload }: MediaUploadProps) {
         </div>
       )}
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-zinc-500">
         Images, videos, audio, documents up to 16MB
       </p>
     </div>

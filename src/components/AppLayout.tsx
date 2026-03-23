@@ -11,15 +11,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { signOut } = useAuthActions();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-200">
+    <div className="min-h-screen bg-zinc-950 flex flex-col">
+      <nav className="sticky top-0 z-50 bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link
               to="/dashboard"
-              className="flex items-center gap-3 text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
+              className="flex items-center gap-3 text-xl font-bold text-zinc-100 hover:text-emerald-400 transition-colors"
             >
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
                 <MessageSquare className="w-4 h-4 text-white" />
               </div>
               <span>Message Hub</span>
@@ -33,8 +33,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     cn(
                       "px-3 py-2 text-sm rounded-lg transition-colors",
                       isActive
-                        ? "text-blue-600 font-medium bg-blue-50"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
+                        ? "text-emerald-400 font-medium bg-emerald-500/10"
+                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800",
                     )
                   }
                 >
@@ -46,8 +46,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     cn(
                       "px-3 py-2 text-sm rounded-lg transition-colors",
                       isActive
-                        ? "text-blue-600 font-medium bg-blue-50"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
+                        ? "text-emerald-400 font-medium bg-emerald-500/10"
+                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800",
                     )
                   }
                 >
@@ -59,8 +59,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     cn(
                       "px-3 py-2 text-sm rounded-lg transition-colors",
                       isActive
-                        ? "text-green-600 font-medium bg-green-50"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100",
+                        ? "text-emerald-400 font-medium bg-emerald-500/10"
+                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800",
                     )
                   }
                 >
@@ -68,7 +68,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </NavLink>
                 <button
                   onClick={() => void signOut()}
-                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600 transition-colors px-3 py-2 rounded-lg hover:bg-red-50 ml-2"
+                  className="flex items-center gap-2 text-sm text-zinc-500 hover:text-red-400 transition-colors px-3 py-2 rounded-lg hover:bg-red-500/10 ml-2"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Logout</span>
@@ -83,15 +83,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <footer role="contentinfo" className="bg-white border-t border-gray-200 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <p className="text-center text-gray-600">
-            &copy; {new Date().getFullYear()} Message Hub. All rights reserved.
-          </p>
-        </div>
-      </footer>
-
-      <Toaster richColors position="top-right" />
+      <Toaster richColors position="top-right" theme="dark" />
     </div>
   );
 }

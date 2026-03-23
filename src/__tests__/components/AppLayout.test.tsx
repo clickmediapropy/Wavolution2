@@ -43,7 +43,7 @@ describe("AppLayout", () => {
     expect(screen.getByText("test child content")).toBeInTheDocument();
   });
 
-  it("renders footer", () => {
+  it("does not render footer", () => {
     render(
       <MemoryRouter>
         <AppLayout>
@@ -52,9 +52,7 @@ describe("AppLayout", () => {
       </MemoryRouter>
     );
 
-    const footer = screen.getByRole("contentinfo");
-    expect(footer).toBeInTheDocument();
-    expect(footer).toHaveTextContent("Message Hub");
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
   });
 
   it("shows logout button when authenticated", () => {

@@ -60,7 +60,7 @@ export function ConnectWhatsAppPage() {
   if (user === undefined) {
     return (
       <div role="status" className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
       </div>
     );
   }
@@ -74,23 +74,23 @@ export function ConnectWhatsAppPage() {
   }
 
   return (
-    <div>
+    <div className="animate-fadeIn">
       <div className="flex items-center gap-3 mb-6">
-        <QrCode className="w-7 h-7 text-green-600" />
-        <h1 className="text-2xl font-bold text-gray-900">Scan QR Code</h1>
+        <QrCode className="w-7 h-7 text-emerald-500" />
+        <h1 className="text-2xl font-bold text-zinc-100">Scan QR Code</h1>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-lg mx-auto text-center">
-        <p className="text-gray-600 mb-6">
+      <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-8 max-w-lg mx-auto text-center">
+        <p className="text-zinc-400 mb-6">
           Open WhatsApp on your phone &rarr; Settings &rarr; Linked Devices
           &rarr; Link a Device &rarr; Scan the code below.
         </p>
 
-        <div className="w-64 h-64 mx-auto mb-6 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
+        <div className="w-64 h-64 mx-auto mb-6 bg-zinc-800 rounded-lg flex items-center justify-center border border-zinc-700">
           {isLoadingQr ? (
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
           ) : error ? (
-            <p className="text-sm text-red-500 px-4">{error}</p>
+            <p className="text-sm text-red-400 px-4">{error}</p>
           ) : qrBase64 ? (
             <img
               src={qrBase64}
@@ -98,14 +98,14 @@ export function ConnectWhatsAppPage() {
               className="w-full h-full object-contain p-2"
             />
           ) : (
-            <p className="text-sm text-gray-400">No QR code available</p>
+            <p className="text-sm text-zinc-500">No QR code available</p>
           )}
         </div>
 
         <button
           onClick={fetchQr}
           disabled={isLoadingQr}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-300 bg-zinc-800 border border-zinc-700 rounded-lg hover:bg-zinc-700 disabled:opacity-50 transition-colors"
         >
           <RefreshCw
             className={`w-4 h-4 ${isLoadingQr ? "animate-spin" : ""}`}
@@ -113,12 +113,12 @@ export function ConnectWhatsAppPage() {
           Refresh QR Code
         </button>
 
-        <p className="text-xs text-gray-400 mt-4">
+        <p className="text-xs text-zinc-500 mt-4">
           QR code expires after ~60 seconds. Click refresh if it doesn't scan.
         </p>
 
-        <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-500">
-          <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+        <div className="mt-4 flex items-center justify-center gap-2 text-sm text-zinc-400">
+          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse-dot" />
           Waiting for connection...
         </div>
       </div>

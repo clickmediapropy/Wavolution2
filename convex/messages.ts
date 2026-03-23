@@ -3,6 +3,20 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { paginationOptsValidator } from "convex/server";
 
+// Count messages for current user
+export const count = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .collect();
+    return messages.length;
+  },
+});
+
 // Log a sent message
 export const logMessage = mutation({
   args: {
