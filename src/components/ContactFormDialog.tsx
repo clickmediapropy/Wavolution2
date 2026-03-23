@@ -67,7 +67,14 @@ export function ContactFormDialog({
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
       <div className="bg-zinc-900 rounded-xl border border-zinc-800 shadow-2xl max-w-md w-full mx-4 p-6 animate-slideUp">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
+            <p className="text-sm text-zinc-500 mt-1">
+              {isEditMode
+                ? "Update contact details"
+                : "Add a new contact to your list"}
+            </p>
+          </div>
           <button
             onClick={onClose}
             className="p-1 text-zinc-500 hover:text-zinc-300"
