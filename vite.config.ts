@@ -21,4 +21,7 @@ export default defineConfig({
     setupFiles: "./src/test-setup.ts",
     exclude: ["node_modules", "references/**"],
   },
+  lint: {
+    ignorePatterns: ["references/**"],
+  },
 });
