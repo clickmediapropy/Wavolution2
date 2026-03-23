@@ -74,7 +74,7 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                className="text-lg font-bold text-zinc-100 whitespace-nowrap"
+                className="text-lg font-bold text-text-primary whitespace-nowrap"
               >
                 Message Hub
               </motion.span>
@@ -114,7 +114,7 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               
               {/* Tooltip for collapsed state */}
               {isCollapsed && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-800 text-zinc-100 text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
+                <div className="absolute left-full ml-2 px-2 py-1 bg-surface-elevated text-text-primary text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
                   {label}
                 </div>
               )}
@@ -187,7 +187,7 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         <button
           onClick={onToggle}
           className={cn(
-            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 transition-all mt-2",
+            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-muted hover:text-text-secondary hover:bg-surface-elevated/50 transition-all mt-2",
             isCollapsed && "justify-center"
           )}
         >
@@ -235,17 +235,17 @@ function MobileNav({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
             onDragEnd={(_, info) => {
               if (info.offset.y > 100) onClose();
             }}
-            className="fixed bottom-0 left-0 right-0 bg-zinc-900 rounded-t-2xl z-50 md:hidden max-h-[80vh] overflow-y-auto"
+            className="fixed bottom-0 left-0 right-0 bg-surface-card rounded-t-2xl z-50 md:hidden max-h-[80vh] overflow-y-auto"
           >
             {/* Drag handle */}
             <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 bg-zinc-700 rounded-full" />
+              <div className="w-10 h-1 bg-border-default rounded-full" />
             </div>
 
             <div className="p-4">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-lg font-semibold text-zinc-100">Menu</span>
-                <button onClick={onClose} className="p-2 text-zinc-400 hover:text-zinc-100">
+                <span className="text-lg font-semibold text-text-primary">Menu</span>
+                <button onClick={onClose} className="p-2 text-text-secondary hover:text-text-primary">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -362,17 +362,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
       >
         {/* Mobile Header */}
         {isAuthenticated && (
-          <header className="md:hidden sticky top-0 z-40 bg-zinc-900/95 backdrop-blur-xl border-b border-zinc-800">
+          <header className="md:hidden sticky top-0 z-40 bg-surface-card/95 backdrop-blur-xl border-b border-border-default">
             <div className="flex items-center justify-between h-14 px-4">
               <Link to="/dashboard" className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
                   <MessageSquare className="w-4 h-4 text-white" />
                 </div>
-                <span className="font-bold text-zinc-100">Message Hub</span>
+                <span className="font-bold text-text-primary">Message Hub</span>
               </Link>
               <button
                 onClick={() => setMobileMenuOpen(true)}
-                className="p-2 text-zinc-400 hover:text-zinc-100"
+                className="p-2 text-text-secondary hover:text-text-primary"
               >
                 <Menu className="w-5 h-5" />
               </button>
@@ -382,12 +382,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
         {/* Desktop Header (non-authenticated) */}
         {!isAuthenticated && (
-          <nav className="sticky top-0 z-50 bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-800">
+          <nav className="sticky top-0 z-50 bg-surface-card/80 backdrop-blur-xl border-b border-border-default">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex justify-between items-center h-16">
                 <Link
                   to="/"
-                  className="flex items-center gap-3 text-xl font-bold text-zinc-100 hover:text-emerald-400 transition-colors"
+                  className="flex items-center gap-3 text-xl font-bold text-text-primary hover:text-emerald-400 transition-colors"
                 >
                   <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
                     <MessageSquare className="w-4 h-4 text-white" />
@@ -398,7 +398,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <div className="flex items-center gap-4">
                   <Link
                     to="/login"
-                    className="text-sm font-medium text-zinc-400 hover:text-zinc-100 transition-colors"
+                    className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
                   >
                     Sign in
                   </Link>

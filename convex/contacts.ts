@@ -555,22 +555,22 @@ function levenshtein(a: string, b: string): number {
   if (n === 0) return m;
 
   const dp: number[][] = Array.from({ length: m + 1 }, () =>
-    Array(n + 1).fill(0),
+    Array<number>(n + 1).fill(0),
   );
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 0; i <= m; i++) dp[i]![0] = i;
+  for (let j = 0; j <= n; j++) dp[0]![j] = j;
 
   for (let i = 1; i <= m; i++) {
     for (let j = 1; j <= n; j++) {
       const cost = al[i - 1] === bl[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost,
+      dp[i]![j] = Math.min(
+        dp[i - 1]![j]! + 1,
+        dp[i]![j - 1]! + 1,
+        dp[i - 1]![j - 1]! + cost,
       );
     }
   }
-  return dp[m][n];
+  return dp[m]![n]!;
 }
 
 // Compute a "richness" score -- contacts with more data should be kept
@@ -626,12 +626,14 @@ export const findDuplicates = query({
       if (group.length > 1) {
         for (let i = 0; i < group.length; i++) {
           for (let j = i + 1; j < group.length; j++) {
-            const key = [group[i]._id, group[j]._id].sort().join(":");
+            const a = group[i]!;
+            const b = group[j]!;
+            const key = [a._id, b._id].sort().join(":");
             if (!seenPairKeys.has(key)) {
               seenPairKeys.add(key);
               pairs.push({
-                contactA: group[i],
-                contactB: group[j],
+                contactA: a,
+                contactB: b,
                 reason: "phone",
               });
             }
@@ -643,25 +645,23 @@ export const findDuplicates = query({
     // 2. Similar names (Levenshtein distance <= 2, both names must be non-empty)
     const NAME_THRESHOLD = 2;
     for (let i = 0; i < contacts.length; i++) {
-      const nameA = [contacts[i].firstName, contacts[i].lastName]
-        .filter(Boolean)
-        .join(" ");
+      const cA = contacts[i]!;
+      const nameA = [cA.firstName, cA.lastName].filter(Boolean).join(" ");
       if (!nameA || nameA.length < 3) continue;
 
       for (let j = i + 1; j < contacts.length; j++) {
-        const nameB = [contacts[j].firstName, contacts[j].lastName]
-          .filter(Boolean)
-          .join(" ");
+        const cB = contacts[j]!;
+        const nameB = [cB.firstName, cB.lastName].filter(Boolean).join(" ");
         if (!nameB || nameB.length < 3) continue;
 
         const dist = levenshtein(nameA, nameB);
         if (dist <= NAME_THRESHOLD && dist < Math.min(nameA.length, nameB.length)) {
-          const key = [contacts[i]._id, contacts[j]._id].sort().join(":");
+          const key = [cA._id, cB._id].sort().join(":");
           if (!seenPairKeys.has(key)) {
             seenPairKeys.add(key);
             pairs.push({
-              contactA: contacts[i],
-              contactB: contacts[j],
+              contactA: cA,
+              contactB: cB,
               reason: "name",
               distance: dist,
             });

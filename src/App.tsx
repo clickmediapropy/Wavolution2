@@ -120,6 +120,14 @@ export default function App() {
                 }
               />
               <Route
+                path="/contacts/duplicates"
+                element={
+                  <ProtectedRoute>
+                    <ContactMergePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/whatsapp"
                 element={
                   <ProtectedRoute>
@@ -272,6 +280,22 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <ActivityLogPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/webhooks"
+                element={
+                  <ProtectedRoute>
+                    <WebhookLogPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/api-docs"
+                element={
+                  <ProtectedRoute>
+                    <APIDocsPage />
                   </ProtectedRoute>
                 }
               />

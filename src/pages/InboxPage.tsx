@@ -171,11 +171,6 @@ export function InboxPage() {
     }
     return map;
   }, [allContacts]);
-  const messageSearchResults = useQuery(
-    api.messages.searchMessages,
-    searchQuery.trim().length >= 2 ? { query: searchQuery.trim() } : "skip",
-  );
-
   const sendMessage = useMutation(api.conversations.sendMessage);
   const addNote = useMutation(api.conversations.addNote);
   const markRead = useMutation(api.conversations.markRead);
@@ -197,6 +192,10 @@ export function InboxPage() {
 
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const messageSearchResults = useQuery(
+    api.messages.searchMessages,
+    searchQuery.trim().length >= 2 ? { query: searchQuery.trim() } : "skip",
+  );
   const [isSending, setIsSending] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiIntent, setAiIntent] = useState("");
@@ -573,10 +572,17 @@ export function InboxPage() {
                     <ArrowLeft className="w-5 h-5" />
                   </button>
                   <div>
-                    <h3 className="text-sm font-semibold text-zinc-100">
-                      {selectedConversation.contactName ||
-                        selectedConversation.phone}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-zinc-100">
+                        {selectedConversation.contactName ||
+                          selectedConversation.phone}
+                      </h3>
+                      {contactForConv?.isBlocked && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-1.5 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded">
+                          Blocked
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-zinc-500">
                       {selectedConversation.phone}
                       {isTypingRecently(
@@ -590,6 +596,38 @@ export function InboxPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Block/Unblock */}
+                  {contactForConv && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          if (contactForConv.isBlocked) {
+                            await unblockContact({ contactId: contactForConv._id });
+                            toast.success("Contact unblocked");
+                          } else {
+                            await blockContact({ contactId: contactForConv._id });
+                            toast.success("Contact blocked");
+                          }
+                        } catch (err) {
+                          toast.error(
+                            err instanceof Error ? err.message : "Failed to update block status",
+                          );
+                        }
+                      }}
+                      className={`p-1.5 transition-colors ${
+                        contactForConv.isBlocked
+                          ? "text-red-400 hover:text-red-300"
+                          : "text-zinc-500 hover:text-red-400"
+                      }`}
+                      title={contactForConv.isBlocked ? "Unblock contact" : "Block contact"}
+                    >
+                      {contactForConv.isBlocked ? (
+                        <ShieldCheck className="w-4 h-4" />
+                      ) : (
+                        <ShieldOff className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
                   {/* Bot/Human toggle */}
                   <button
                     onClick={async () => {

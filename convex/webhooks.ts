@@ -1,7 +1,7 @@
 import { httpAction } from "./_generated/server";
 import { query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 // --- HTTP action: receives Evolution API webhook events ---

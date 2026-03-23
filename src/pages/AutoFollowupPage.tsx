@@ -101,8 +101,9 @@ export function AutoFollowupPage() {
   };
 
   const updateStep = (index: number, field: keyof StepForm, value: string | number) => {
-    const updated = [...form.steps];
-    updated[index] = { ...updated[index], [field]: value };
+    const updated = form.steps.map((s, i) =>
+      i === index ? { ...s, [field]: value } as StepForm : s,
+    );
     setForm({ ...form, steps: updated });
   };
 
@@ -115,12 +116,12 @@ export function AutoFollowupPage() {
       toast.error("At least one step is required");
       return;
     }
-    for (let i = 0; i < form.steps.length; i++) {
-      if (form.steps[i].delayMinutes < 1) {
+    for (const [i, step] of form.steps.entries()) {
+      if (step.delayMinutes < 1) {
         toast.error(`Step ${i + 1}: delay must be at least 1 minute`);
         return;
       }
-      if (!form.steps[i].messageTemplate.trim()) {
+      if (!step.messageTemplate.trim()) {
         toast.error(`Step ${i + 1}: message cannot be empty`);
         return;
       }

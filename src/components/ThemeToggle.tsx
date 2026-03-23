@@ -72,7 +72,7 @@ export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps) {
     <button
       onClick={toggle}
       className={cn(
-        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-zinc-400 dark:text-zinc-400 light:text-zinc-500 hover:text-zinc-100 dark:hover:text-zinc-100 light:hover:text-zinc-900 hover:bg-zinc-800/50 dark:hover:bg-zinc-800/50 light:hover:bg-zinc-200/50 transition-all group relative",
+        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-elevated/50 transition-all group relative",
         isCollapsed && "justify-center"
       )}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
@@ -120,7 +120,7 @@ export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps) {
 
       {/* Tooltip for collapsed state */}
       {isCollapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-zinc-800 dark:bg-zinc-800 light:bg-white light:text-zinc-900 text-zinc-100 text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
+        <div className="absolute left-full ml-2 px-2 py-1 bg-surface-elevated text-text-primary text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
           {isDark ? "Switch to Light" : "Switch to Dark"}
         </div>
       )}
