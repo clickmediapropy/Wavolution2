@@ -1,16 +1,20 @@
 import { motion } from "framer-motion";
 
-// Shimmer pulse component with gradient animation
-function ShimmerPulse({ className = "", delay = 0 }: { className?: string; delay?: number }) {
+interface ShimmerPulseProps {
+  className?: string;
+  delay?: number;
+}
+
+function ShimmerPulse({ className = "", delay = 0 }: ShimmerPulseProps) {
   return (
     <motion.div
       initial={{ opacity: 0.5 }}
       animate={{ opacity: [0.5, 0.8, 0.5] }}
-      transition={{ 
-        duration: 1.5, 
-        repeat: Infinity, 
+      transition={{
+        duration: 1.5,
+        repeat: Infinity,
         ease: "easeInOut",
-        delay 
+        delay,
       }}
       className={`rounded-lg bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 bg-[length:200%_100%] animate-shimmer ${className}`}
       aria-hidden="true"
@@ -18,8 +22,11 @@ function ShimmerPulse({ className = "", delay = 0 }: { className?: string; delay
   );
 }
 
-// Card skeleton
-export function SkeletonCard({ delay = 0 }: { delay?: number }) {
+interface DelayProps {
+  delay?: number;
+}
+
+export function SkeletonCard({ delay = 0 }: DelayProps) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
       <div className="flex items-center gap-3 mb-4">
@@ -31,8 +38,7 @@ export function SkeletonCard({ delay = 0 }: { delay?: number }) {
   );
 }
 
-// Stats card skeleton with sparkline area
-export function SkeletonStatsCard({ delay = 0 }: { delay?: number }) {
+export function SkeletonStatsCard({ delay = 0 }: DelayProps) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
       <div className="flex items-start justify-between">
@@ -49,32 +55,50 @@ export function SkeletonStatsCard({ delay = 0 }: { delay?: number }) {
   );
 }
 
-// Table row skeleton
-export function SkeletonTableRow({ columns = 5, delay = 0 }: { columns?: number; delay?: number }) {
+function getColumnWidth(index: number, total: number): string {
+  if (index === 0) return "w-4 rounded";
+  if (index === total - 1) return "w-12 ml-auto";
+  return "w-24";
+}
+
+interface SkeletonTableRowProps {
+  columns?: number;
+  delay?: number;
+}
+
+export function SkeletonTableRow({ columns = 5, delay = 0 }: SkeletonTableRowProps) {
   return (
     <div className="flex items-center gap-4 px-4 py-3 border-b border-zinc-800/50">
       {Array.from({ length: columns }).map((_, i) => (
-        <ShimmerPulse 
-          key={i} 
-          delay={delay + i * 0.05} 
-          className={`h-4 ${i === columns - 1 ? "w-12 ml-auto" : i === 0 ? "w-4 rounded" : "w-24"}`} 
+        <ShimmerPulse
+          key={i}
+          delay={delay + i * 0.05}
+          className={`h-4 ${getColumnWidth(i, columns)}`}
         />
       ))}
     </div>
   );
 }
 
-// Table skeleton
-export function SkeletonTable({ rows = 5, columns = 5 }: { rows?: number; columns?: number }) {
+function getHeaderColumnWidth(index: number, total: number): string {
+  if (index === 0) return "w-10";
+  if (index === total - 1) return "w-16 ml-auto";
+  return "w-24";
+}
+
+interface SkeletonTableProps {
+  rows?: number;
+  columns?: number;
+}
+
+export function SkeletonTable({ rows = 5, columns = 5 }: SkeletonTableProps) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-      {/* Header */}
       <div className="flex items-center gap-4 px-4 py-3 border-b border-zinc-800 bg-zinc-800/30">
         {Array.from({ length: columns }).map((_, i) => (
-          <ShimmerPulse key={i} className={`h-4 ${i === 0 ? "w-10" : i === columns - 1 ? "w-16 ml-auto" : "w-24"}`} />
+          <ShimmerPulse key={i} className={`h-4 ${getHeaderColumnWidth(i, columns)}`} />
         ))}
       </div>
-      {/* Rows */}
       {Array.from({ length: rows }).map((_, i) => (
         <SkeletonTableRow key={i} columns={columns} delay={i * 0.1} />
       ))}
@@ -82,8 +106,7 @@ export function SkeletonTable({ rows = 5, columns = 5 }: { rows?: number; column
   );
 }
 
-// Contact card skeleton (mobile view)
-export function SkeletonContactCard({ delay = 0 }: { delay?: number }) {
+export function SkeletonContactCard({ delay = 0 }: DelayProps) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
       <div className="flex items-center gap-3">
@@ -101,8 +124,7 @@ export function SkeletonContactCard({ delay = 0 }: { delay?: number }) {
   );
 }
 
-// Form field skeleton
-export function SkeletonFormField({ delay = 0 }: { delay?: number }) {
+export function SkeletonFormField({ delay = 0 }: DelayProps) {
   return (
     <div className="space-y-2">
       <ShimmerPulse delay={delay} className="h-4 w-24" />
@@ -111,8 +133,7 @@ export function SkeletonFormField({ delay = 0 }: { delay?: number }) {
   );
 }
 
-// Page header skeleton
-export function SkeletonHeader({ delay = 0 }: { delay?: number }) {
+export function SkeletonHeader({ delay = 0 }: DelayProps) {
   return (
     <div className="flex items-center gap-3 mb-6">
       <ShimmerPulse delay={delay} className="w-8 h-8 rounded-lg" />
@@ -121,29 +142,25 @@ export function SkeletonHeader({ delay = 0 }: { delay?: number }) {
   );
 }
 
-// Full page skeleton
 export function SkeletonPage() {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="space-y-6" 
-      role="status" 
+      className="space-y-6"
+      role="status"
       aria-label="Loading"
     >
-      {/* Header */}
       <SkeletonHeader />
-      
-      {/* Stats row */}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <SkeletonStatsCard delay={0} />
         <SkeletonStatsCard delay={0.1} />
         <SkeletonStatsCard delay={0.2} />
         <SkeletonStatsCard delay={0.3} />
       </div>
-      
-      {/* Content */}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
@@ -170,24 +187,20 @@ export function SkeletonPage() {
   );
 }
 
-// Dashboard skeleton
 export function SkeletonDashboard() {
   return (
     <div className="space-y-6" role="status" aria-label="Loading dashboard">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <SkeletonHeader />
         <ShimmerPulse className="h-8 w-32 rounded-full hidden sm:block" />
       </div>
-      
-      {/* Stats */}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <SkeletonStatsCard key={i} delay={i * 0.1} />
         ))}
       </div>
-      
-      {/* Bottom content */}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
           <ShimmerPulse className="h-6 w-40 mb-4" />
@@ -215,11 +228,9 @@ export function SkeletonDashboard() {
   );
 }
 
-// Contacts page skeleton
 export function SkeletonContactsPage() {
   return (
     <div className="space-y-6" role="status" aria-label="Loading contacts">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <SkeletonHeader />
         <div className="flex gap-3">
@@ -227,18 +238,15 @@ export function SkeletonContactsPage() {
           <ShimmerPulse className="h-10 w-32 rounded-lg" />
         </div>
       </div>
-      
-      {/* Filters */}
+
       <div className="flex flex-wrap gap-3">
         <ShimmerPulse className="h-10 w-64 rounded-lg" />
         <ShimmerPulse className="h-10 w-32 rounded-lg" />
         <ShimmerPulse className="h-10 w-32 rounded-lg ml-auto" />
       </div>
-      
-      {/* Table */}
+
       <SkeletonTable rows={8} columns={5} />
-      
-      {/* Pagination */}
+
       <div className="flex items-center justify-between">
         <ShimmerPulse className="h-4 w-48" />
         <div className="flex gap-2">
@@ -251,11 +259,9 @@ export function SkeletonContactsPage() {
   );
 }
 
-// Campaign page skeleton
 export function SkeletonCampaignPage() {
   return (
     <div className="space-y-6" role="status" aria-label="Loading campaign">
-      {/* Step indicator */}
       <div className="flex items-center gap-4 py-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex items-center gap-4 flex-1">
@@ -264,8 +270,7 @@ export function SkeletonCampaignPage() {
           </div>
         ))}
       </div>
-      
-      {/* Content */}
+
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-6">
         <ShimmerPulse className="h-8 w-64" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

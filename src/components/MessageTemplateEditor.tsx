@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useRef } from "react";
 import { User, UserRound, Phone } from "lucide-react";
 
@@ -15,7 +16,7 @@ const TOKENS = [
 export function MessageTemplateEditor({
   value,
   onChange,
-}: MessageTemplateEditorProps) {
+}: MessageTemplateEditorProps): ReactNode {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const insertToken = (token: string) => {
@@ -44,7 +45,6 @@ export function MessageTemplateEditor({
         Message Template
       </label>
 
-      {/* Token buttons */}
       <div className="flex items-center gap-2">
         <span className="text-xs text-zinc-500">Insert:</span>
         {TOKENS.map((token) => (

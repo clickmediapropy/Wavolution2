@@ -63,15 +63,15 @@ function StatusIndicator({ connected }: { connected: boolean }) {
   );
 }
 
+function getRateColors(rate: number): { bar: string; text: string } {
+  if (rate >= 90) return { bar: "bg-emerald-500", text: "text-emerald-400" };
+  if (rate >= 70) return { bar: "bg-amber-500", text: "text-amber-400" };
+  return { bar: "bg-red-500", text: "text-red-400" };
+}
+
+
 function SuccessRateBar({ rate }: { rate: number }) {
-  const color =
-    rate >= 90 ? "bg-emerald-500" : rate >= 70 ? "bg-amber-500" : "bg-red-500";
-  const textColor =
-    rate >= 90
-      ? "text-emerald-400"
-      : rate >= 70
-        ? "text-amber-400"
-        : "text-red-400";
+  const { bar, text } = getRateColors(rate);
 
   return (
     <div className="flex items-center gap-3">
@@ -80,10 +80,10 @@ function SuccessRateBar({ rate }: { rate: number }) {
           initial={{ width: 0 }}
           animate={{ width: `${rate}%` }}
           transition={{ duration: 1, delay: 0.3 }}
-          className={`h-full ${color} rounded-full`}
+          className={`h-full ${bar} rounded-full`}
         />
       </div>
-      <span className={`text-sm font-semibold ${textColor} tabular-nums w-12 text-right`}>
+      <span className={`text-sm font-semibold ${text} tabular-nums w-12 text-right`}>
         {rate}%
       </span>
     </div>

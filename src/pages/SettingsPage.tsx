@@ -21,18 +21,23 @@ import { useState } from "react";
 import { staggerContainerVariants, staggerItemVariants } from "@/lib/transitions";
 import { toast } from "sonner";
 
-function MaskedValue({ value, label }: { value: string; label: string }) {
+interface MaskedValueProps {
+  value: string;
+  label: string;
+}
+
+function MaskedValue({ value, label }: MaskedValueProps): React.ReactElement {
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const masked = value.slice(0, 8) + "..." + value.slice(-4);
 
-  const handleCopy = () => {
+  function handleCopy(): void {
     void navigator.clipboard.writeText(value);
     setCopied(true);
     toast.success(`${label} copied to clipboard`);
     setTimeout(() => setCopied(false), 2000);
-  };
+  }
 
   return (
     <div className="flex items-center gap-2">
@@ -95,7 +100,7 @@ const colorMap: Record<string, string> = {
   amber: "bg-amber-500/10 text-amber-400",
 };
 
-export function SettingsPage() {
+export function SettingsPage(): React.ReactElement {
   const user = useQuery(api.users.currentUser);
   const instances = useQuery(api.instances.list);
 

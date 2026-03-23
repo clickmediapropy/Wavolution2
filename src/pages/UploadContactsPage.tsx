@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -50,10 +50,11 @@ export function UploadContactsPage() {
   const [validateWhatsApp, setValidateWhatsApp] = useState(true);
   const [selectedInstanceId, setSelectedInstanceId] = useState("");
 
-  // Auto-select if only one connected instance
-  if (connectedInstances?.length === 1 && !selectedInstanceId) {
-    setSelectedInstanceId(connectedInstances[0]!._id);
-  }
+  useEffect(() => {
+    if (connectedInstances?.length === 1 && !selectedInstanceId) {
+      setSelectedInstanceId(connectedInstances[0]!._id);
+    }
+  }, [connectedInstances, selectedInstanceId]);
 
   const instanceOptions = (connectedInstances ?? []).map((inst) => ({
     value: inst._id,
@@ -396,11 +397,9 @@ export function UploadContactsPage() {
             disabled={!canImport}
             className="w-full px-4 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isImporting
-              ? "Importing..."
-              : validateWhatsApp
-                ? "Validate & Import"
-                : "Import Contacts"}
+            {isImporting && "Importing..."}
+            {!isImporting && validateWhatsApp && "Validate & Import"}
+            {!isImporting && !validateWhatsApp && "Import Contacts"}
           </button>
         </div>
       </div>

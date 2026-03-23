@@ -37,6 +37,17 @@ const emptyForm: GoalFormData = {
   steps: [{ message: "", delay: undefined }],
 };
 
+function parseKeywords(raw: string): string[] {
+  return raw.split(",").map((k) => k.trim()).filter(Boolean);
+}
+
+function parseSteps(steps: Step[]): Array<{ message: string; delay?: number }> {
+  return steps.map((s) => ({
+    message: s.message,
+    ...(s.delay !== undefined ? { delay: s.delay } : {}),
+  }));
+}
+
 function StepRow({
   step,
   index,
@@ -143,7 +154,6 @@ function GoalForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Name */}
       <div>
         <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 mb-2">
           <Target className="w-3.5 h-3.5" />
@@ -158,7 +168,6 @@ function GoalForm({
         />
       </div>
 
-      {/* Trigger Keywords */}
       <div>
         <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 mb-2">
           <MessageSquare className="w-3.5 h-3.5" />
@@ -176,7 +185,6 @@ function GoalForm({
         </p>
       </div>
 
-      {/* Steps */}
       <div>
         <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 mb-3">
           Steps
@@ -203,7 +211,6 @@ function GoalForm({
         </button>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center justify-end gap-3 pt-2">
         <button
           type="button"
@@ -233,7 +240,7 @@ function GoalCard({
     name: string;
     triggerKeywords: string[];
     steps: Step[];
-    active: boolean;
+    isActive: boolean;
   };
 }) {
   const update = useMutation(api.botGoals.update);
@@ -244,8 +251,8 @@ function GoalCard({
 
   const handleToggle = async () => {
     try {
-      await update({ id: goal._id, active: !goal.active });
-      toast.success(goal.active ? "Goal deactivated" : "Goal activated");
+      await update({ id: goal._id, isActive: !goal.isActive });
+      toast.success(goal.isActive ? "Goal deactivated" : "Goal activated");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update");
     }
@@ -265,14 +272,8 @@ function GoalCard({
       await update({
         id: goal._id,
         name: data.name,
-        triggerKeywords: data.triggerKeywords
-          .split(",")
-          .map((k) => k.trim())
-          .filter(Boolean),
-        steps: data.steps.map((s) => ({
-          message: s.message,
-          ...(s.delay !== undefined ? { delay: s.delay } : {}),
-        })),
+        triggerKeywords: parseKeywords(data.triggerKeywords),
+        steps: parseSteps(data.steps),
       });
       toast.success("Goal updated");
       setEditing(false);
@@ -310,7 +311,6 @@ function GoalCard({
       variants={staggerItemVariants}
       className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
     >
-      {/* Header */}
       <div className="flex items-center justify-between p-5 border-b border-zinc-800">
         <div className="flex items-center gap-3 min-w-0">
           <div className="p-2 bg-amber-500/10 rounded-lg flex-shrink-0">
@@ -327,23 +327,22 @@ function GoalCard({
           <button
             onClick={handleToggle}
             className="flex items-center gap-2 transition-colors"
-            aria-label={goal.active ? "Deactivate goal" : "Activate goal"}
+            aria-label={goal.isActive ? "Deactivate goal" : "Activate goal"}
           >
-            {goal.active ? (
+            {goal.isActive ? (
               <ToggleRight className="w-8 h-8 text-emerald-400" />
             ) : (
               <ToggleLeft className="w-8 h-8 text-zinc-600" />
             )}
             <span
-              className={`text-xs font-medium ${goal.active ? "text-emerald-400" : "text-zinc-500"}`}
+              className={`text-xs font-medium ${goal.isActive ? "text-emerald-400" : "text-zinc-500"}`}
             >
-              {goal.active ? "Active" : "Off"}
+              {goal.isActive ? "Active" : "Off"}
             </span>
           </button>
         </div>
       </div>
 
-      {/* Keywords */}
       <div className="px-5 pt-4 pb-3">
         <p className="text-xs font-medium text-zinc-500 mb-2">Trigger Keywords</p>
         <div className="flex flex-wrap gap-1.5">
@@ -361,7 +360,6 @@ function GoalCard({
         </div>
       </div>
 
-      {/* Expandable Steps */}
       <div className="px-5 pb-4">
         <button
           onClick={() => setExpanded(!expanded)}
@@ -402,7 +400,6 @@ function GoalCard({
         </AnimatePresence>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-2 px-5 pb-4">
         <button
           onClick={() => setEditing(true)}
@@ -450,14 +447,9 @@ export function BotGoalsPage() {
     try {
       await create({
         name: data.name,
-        triggerKeywords: data.triggerKeywords
-          .split(",")
-          .map((k) => k.trim())
-          .filter(Boolean),
-        steps: data.steps.map((s) => ({
-          message: s.message,
-          ...(s.delay !== undefined ? { delay: s.delay } : {}),
-        })),
+        triggerKeywords: parseKeywords(data.triggerKeywords),
+        steps: parseSteps(data.steps),
+        isActive: true,
       });
       toast.success("Goal created");
       setShowForm(false);
@@ -481,7 +473,6 @@ export function BotGoalsPage() {
       animate="animate"
       className="space-y-6 p-6"
     >
-      {/* Header */}
       <motion.div variants={staggerItemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-amber-500/10 rounded-xl">
@@ -505,7 +496,6 @@ export function BotGoalsPage() {
         )}
       </motion.div>
 
-      {/* Info banner */}
       <motion.div
         variants={staggerItemVariants}
         className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3"
@@ -519,7 +509,6 @@ export function BotGoalsPage() {
         </div>
       </motion.div>
 
-      {/* Create form */}
       <AnimatePresence>
         {showForm && (
           <motion.div
@@ -542,7 +531,6 @@ export function BotGoalsPage() {
         )}
       </AnimatePresence>
 
-      {/* Goal cards */}
       {goals.length === 0 && !showForm ? (
         <motion.div
           variants={staggerItemVariants}

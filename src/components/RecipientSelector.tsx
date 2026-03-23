@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
-import { Users, Clock, UserCheck } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Clock, UserCheck, Users } from "lucide-react";
 import type { Doc } from "@convex/_generated/dataModel";
+import { getFullName } from "@/lib/utils";
 
 type RecipientType = "all" | "pending" | "manual";
 
@@ -37,6 +38,23 @@ const RECIPIENT_OPTIONS: {
     icon: <UserCheck className="w-5 h-5" />,
   },
 ];
+
+function getStatusClasses(status: string): string {
+  switch (status) {
+    case "pending":
+      return "bg-amber-500/10 text-amber-400";
+    case "sent":
+      return "bg-emerald-500/10 text-emerald-400";
+    default:
+      return "bg-red-500/10 text-red-400";
+  }
+}
+
+function formatContactDisplay(contact: Doc<"contacts">): string {
+  const name = getFullName(contact);
+  if (name) return `${name} (${contact.phone})`;
+  return contact.phone;
+}
 
 export function RecipientSelector({
   contacts,
@@ -89,7 +107,6 @@ export function RecipientSelector({
     <div className="space-y-4">
       <h3 className="text-sm font-medium text-zinc-300">Choose Recipients</h3>
 
-      {/* Radio cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {RECIPIENT_OPTIONS.map((opt) => (
           <button
@@ -120,13 +137,11 @@ export function RecipientSelector({
         ))}
       </div>
 
-      {/* Recipient count */}
       <p className="text-sm text-zinc-400">
         <span className="font-medium text-emerald-400">{recipientCount}</span>{" "}
         {recipientCount === 1 ? "recipient" : "recipients"} selected
       </p>
 
-      {/* Manual selection checkbox list */}
       {recipientType === "manual" && (
         <div className="space-y-2">
           <input
@@ -178,19 +193,9 @@ export function RecipientSelector({
                     className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-emerald-500 focus:ring-emerald-500/50"
                   />
                   <span className="text-sm text-zinc-200 truncate">
-                    {(contact.firstName || contact.lastName)
-                      ? `${[contact.firstName, contact.lastName].filter(Boolean).join(" ")} (${contact.phone})`
-                      : contact.phone}
+                    {formatContactDisplay(contact)}
                   </span>
-                  <span
-                    className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
-                      contact.status === "pending"
-                        ? "bg-amber-500/10 text-amber-400"
-                        : contact.status === "sent"
-                          ? "bg-emerald-500/10 text-emerald-400"
-                          : "bg-red-500/10 text-red-400"
-                    }`}
-                  >
+                  <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${getStatusClasses(contact.status)}`}>
                     {contact.status}
                   </span>
                 </label>

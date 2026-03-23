@@ -1,4 +1,4 @@
-import { FormEvent, useState, useEffect } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
 
 interface ContactFormContact {
@@ -14,7 +14,6 @@ interface ContactFormDialogProps {
   onSubmit: (data: { id?: string; phone: string; firstName: string; lastName: string }) => void;
   error: string;
   isSubmitting: boolean;
-  /** When provided, dialog opens in edit mode with pre-filled fields */
   contact?: ContactFormContact | null;
 }
 
@@ -58,14 +57,14 @@ export function ContactFormDialog({
   }
 
   const title = isEditMode ? "Edit Contact" : "Add Contact";
-  const submitLabel = isEditMode
-    ? isSubmitting
-      ? "Saving..."
-      : "Save Changes"
-    : isSubmitting
-      ? "Adding..."
-      : "Add Contact";
   const fieldPrefix = isEditMode ? "edit" : "add";
+
+  let submitLabel: string;
+  if (isEditMode) {
+    submitLabel = isSubmitting ? "Saving..." : "Save Changes";
+  } else {
+    submitLabel = isSubmitting ? "Adding..." : "Add Contact";
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">

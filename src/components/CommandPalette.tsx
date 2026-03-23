@@ -155,14 +155,21 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
     [filtered, selectedIndex, onClose],
   );
 
-  // Build a flat index counter for keyboard navigation across sections
-  let flatIndex = 0;
+  const flatIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    let idx = 0;
+    for (const [, items] of grouped) {
+      for (const item of items) {
+        map.set(item.id, idx++);
+      }
+    }
+    return map;
+  }, [grouped]);
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -172,7 +179,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
           />
 
-          {/* Palette */}
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -184,7 +190,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               className="mx-4 rounded-xl border border-zinc-700/50 bg-zinc-900/95 backdrop-blur-xl shadow-2xl shadow-black/40 overflow-hidden"
               onKeyDown={handleKeyDown}
             >
-              {/* Search input */}
               <div className="flex items-center gap-3 px-4 border-b border-zinc-800">
                 <Search className="w-4 h-4 text-zinc-500 flex-shrink-0" />
                 <input
@@ -202,7 +207,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                 </kbd>
               </div>
 
-              {/* Results */}
               <div ref={listRef} className="max-h-[320px] overflow-y-auto py-2">
                 {filtered.length === 0 && (
                   <p className="px-4 py-8 text-center text-sm text-zinc-500">
@@ -216,13 +220,13 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                       {section}
                     </p>
                     {items.map((item) => {
-                      const currentIndex = flatIndex++;
+                      const currentIndex = flatIndexMap.get(item.id) ?? 0;
                       const Icon = item.icon;
                       return (
                         <button
                           key={item.id}
                           data-index={currentIndex}
-                          onClick={() => item.action()}
+                          onClick={item.action}
                           onMouseEnter={() => setSelectedIndex(currentIndex)}
                           className={cn(
                             "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",

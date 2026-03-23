@@ -6,7 +6,7 @@ import { ArrowRight, Eye, EyeOff, MessageSquare, Sparkles } from "lucide-react";
 import { pageVariants } from "@/lib/transitions";
 import { cn } from "@/lib/utils";
 
-export function LoginPage() {
+export function LoginPage(): React.ReactElement {
   const { signIn } = useAuthActions();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

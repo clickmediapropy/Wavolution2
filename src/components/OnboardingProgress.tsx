@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { motion } from "framer-motion";
@@ -12,13 +13,12 @@ interface Step {
   href: string;
 }
 
-export function OnboardingProgress() {
+export function OnboardingProgress(): ReactNode {
   const instanceCounts = useQuery(api.instances.count);
   const contactCount = useQuery(api.contacts.count);
   const campaigns = useQuery(api.campaigns.listByUser);
   const instances = useQuery(api.instances.list);
 
-  // Still loading
   if (
     instanceCounts === undefined ||
     contactCount === undefined ||
@@ -28,45 +28,38 @@ export function OnboardingProgress() {
     return null;
   }
 
-  const hasInstance = instanceCounts.total > 0;
-  const hasContact = contactCount > 0;
-  const hasCampaignSent = campaigns.some(
-    (c) => c.status === "completed" || c.status === "running" || c.status === "paused",
-  );
-  const hasBotConfigured = instances.some((i) => i.botEnabled === true);
-
   const steps: Step[] = [
     {
       label: "Connect WhatsApp",
       description: "Create your first WhatsApp instance",
-      completed: hasInstance,
+      completed: instanceCounts.total > 0,
       href: "/whatsapp",
     },
     {
       label: "Add a contact",
       description: "Import or create your first contact",
-      completed: hasContact,
+      completed: contactCount > 0,
       href: "/contacts",
     },
     {
       label: "Send a campaign",
       description: "Launch your first messaging campaign",
-      completed: hasCampaignSent,
+      completed: campaigns.some(
+        (c) => c.status === "completed" || c.status === "running" || c.status === "paused",
+      ),
       href: "/campaigns",
     },
     {
       label: "Configure a bot",
       description: "Enable auto-reply on an instance",
-      completed: hasBotConfigured,
+      completed: instances.some((i) => i.botEnabled === true),
       href: "/whatsapp",
     },
   ];
 
   const completedCount = steps.filter((s) => s.completed).length;
-  const allComplete = completedCount === steps.length;
 
-  // Hide once all steps are done
-  if (allComplete) {
+  if (completedCount === steps.length) {
     return null;
   }
 
@@ -77,7 +70,6 @@ export function OnboardingProgress() {
       variants={staggerItemVariants}
       className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6"
     >
-      {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 bg-emerald-500/10 rounded-lg">
           <Rocket className="w-5 h-5 text-emerald-400" />
@@ -93,7 +85,6 @@ export function OnboardingProgress() {
         </span>
       </div>
 
-      {/* Progress bar */}
       <div className="h-2 bg-zinc-800 rounded-full overflow-hidden mb-5">
         <motion.div
           className="h-full bg-emerald-500 rounded-full"
@@ -103,7 +94,6 @@ export function OnboardingProgress() {
         />
       </div>
 
-      {/* Steps */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {steps.map((step) => (
           <Link

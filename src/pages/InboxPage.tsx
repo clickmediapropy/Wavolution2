@@ -31,8 +31,6 @@ import { toast } from "sonner";
 import type { Id } from "@convex/_generated/dataModel";
 import { InboxNotificationToggle } from "../components/InboxNotification";
 
-const MEDIA_MAX_HEIGHT = 200;
-
 const TIME_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
   hour: "2-digit",
   minute: "2-digit",
@@ -128,8 +126,7 @@ function MediaPreview({
       <video
         src={url}
         controls
-        className="max-w-full rounded-lg mb-1"
-        style={{ maxHeight: 200 }}
+        className="max-w-full max-h-[200px] rounded-lg mb-1"
       />
     );
   }
@@ -262,29 +259,31 @@ export function InboxPage() {
   const baseConversations =
     activeFilter === "archived" ? archivedConversations : conversations;
 
-  // Apply tab filter, then search
-  const filteredConversations = baseConversations
-    ?.filter((c) => {
-      switch (activeFilter) {
-        case "unread":
-          return c.unreadCount > 0;
-        case "bot":
-          return c.status === "bot";
-        case "human":
-          return c.status === "human";
-        default:
-          return true; // "all" and "archived" show everything in their list
-      }
-    })
-    .filter((c) => {
-      if (!searchQuery) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        c.contactName?.toLowerCase().includes(q) ||
-        c.phone.toLowerCase().includes(q) ||
-        c.lastMessageText?.toLowerCase().includes(q)
-      );
-    });
+  const filteredConversations = useMemo(() => {
+    if (!baseConversations) return undefined;
+    const q = searchQuery.toLowerCase();
+    return baseConversations
+      .filter((c) => {
+        switch (activeFilter) {
+          case "unread":
+            return c.unreadCount > 0;
+          case "bot":
+            return c.status === "bot";
+          case "human":
+            return c.status === "human";
+          default:
+            return true;
+        }
+      })
+      .filter((c) => {
+        if (!searchQuery) return true;
+        return (
+          c.contactName?.toLowerCase().includes(q) ||
+          c.phone.toLowerCase().includes(q) ||
+          c.lastMessageText?.toLowerCase().includes(q)
+        );
+      });
+  }, [baseConversations, activeFilter, searchQuery]);
 
   const hasSelection = selectedConvIds.size > 0;
 
@@ -368,6 +367,46 @@ export function InboxPage() {
       );
     }
   };
+
+  const handleBlockToggle = useCallback(async () => {
+    if (!contactForConv) return;
+    try {
+      if (contactForConv.isBlocked) {
+        await unblockContact({ contactId: contactForConv._id });
+        toast.success("Contact unblocked");
+      } else {
+        await blockContact({ contactId: contactForConv._id });
+        toast.success("Contact blocked");
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update block status",
+      );
+    }
+  }, [contactForConv, blockContact, unblockContact]);
+
+  const handleToggleMode = useCallback(async () => {
+    if (!conversationId) return;
+    const newMode = await toggleMode({
+      id: conversationId as Id<"conversations">,
+    });
+    toast.success(
+      `Switched to ${newMode === "bot" ? "AI auto-reply" : "manual"} mode`,
+    );
+  }, [conversationId, toggleMode]);
+
+  const handleArchive = useCallback(async () => {
+    if (!conversationId) return;
+    await archiveConv({ id: conversationId as Id<"conversations"> });
+    navigate("/inbox");
+    toast.success("Conversation archived");
+  }, [conversationId, archiveConv, navigate]);
+
+  const handleMarkUnread = useCallback(async () => {
+    if (!conversationId) return;
+    await markUnread({ id: conversationId as Id<"conversations"> });
+    toast.success("Marked as unread");
+  }, [conversationId, markUnread]);
 
   // Loading state — wait for the active list to be available
   const isLoading =
@@ -459,11 +498,7 @@ export function InboxPage() {
                   <MessageSquare className="w-8 h-8 mb-2" />
                 )}
                 <p className="text-sm">
-                  {activeFilter === "all" && "No conversations"}
-                  {activeFilter === "unread" && "No unread conversations"}
-                  {activeFilter === "bot" && "No bot mode conversations"}
-                  {activeFilter === "human" && "No human mode conversations"}
-                  {activeFilter === "archived" && "No archived conversations"}
+                  {EMPTY_STATE_LABELS[activeFilter]}
                 </p>
               </div>
             ) : (
@@ -624,24 +659,9 @@ export function InboxPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Block/Unblock */}
                   {contactForConv && (
                     <button
-                      onClick={async () => {
-                        try {
-                          if (contactForConv.isBlocked) {
-                            await unblockContact({ contactId: contactForConv._id });
-                            toast.success("Contact unblocked");
-                          } else {
-                            await blockContact({ contactId: contactForConv._id });
-                            toast.success("Contact blocked");
-                          }
-                        } catch (err) {
-                          toast.error(
-                            err instanceof Error ? err.message : "Failed to update block status",
-                          );
-                        }
-                      }}
+                      onClick={handleBlockToggle}
                       className={`p-1.5 transition-colors ${
                         contactForConv.isBlocked
                           ? "text-red-400 hover:text-red-300"
@@ -656,16 +676,8 @@ export function InboxPage() {
                       )}
                     </button>
                   )}
-                  {/* Bot/Human toggle */}
                   <button
-                    onClick={async () => {
-                      const newMode = await toggleMode({
-                        id: conversationId as Id<"conversations">,
-                      });
-                      toast.success(
-                        `Switched to ${newMode === "bot" ? "AI auto-reply" : "manual"} mode`,
-                      );
-                    }}
+                    onClick={handleToggleMode}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                       selectedConversation.status === "bot"
                         ? "bg-violet-500/10 text-violet-400 hover:bg-violet-500/20"
@@ -687,28 +699,15 @@ export function InboxPage() {
                       </>
                     )}
                   </button>
-                  {/* Archive */}
                   <button
-                    onClick={async () => {
-                      await archiveConv({
-                        id: conversationId as Id<"conversations">,
-                      });
-                      navigate("/inbox");
-                      toast.success("Conversation archived");
-                    }}
+                    onClick={handleArchive}
                     className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors"
                     title="Archive"
                   >
                     <Archive className="w-4 h-4" />
                   </button>
-                  {/* Mark unread */}
                   <button
-                    onClick={async () => {
-                      await markUnread({
-                        id: conversationId as Id<"conversations">,
-                      });
-                      toast.success("Marked as unread");
-                    }}
+                    onClick={handleMarkUnread}
                     className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors"
                     title="Mark unread"
                   >
@@ -748,10 +747,7 @@ export function InboxPage() {
                               <span className="text-[10px]">
                                 {new Date(
                                   msg._creationTime,
-                                ).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
+                                ).toLocaleTimeString([], TIME_FORMAT_OPTIONS)}
                               </span>
                             </div>
                           </div>
@@ -810,15 +806,7 @@ export function InboxPage() {
                             </span>
                             {msg.direction === "outgoing" && (
                               <span className="text-[10px]">
-                                {msg.status === "read"
-                                  ? "\u2713\u2713"
-                                  : msg.status === "delivered"
-                                    ? "\u2713\u2713"
-                                    : msg.status === "sent"
-                                      ? "\u2713"
-                                      : msg.status === "failed"
-                                        ? "\u2717"
-                                        : "\u231B"}
+                                {getStatusIcon(msg.status)}
                               </span>
                             )}
                             {msg.mediaType && (

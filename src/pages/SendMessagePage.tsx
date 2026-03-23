@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useAction, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Loader2, Send } from "lucide-react";
@@ -6,13 +6,9 @@ import { toast } from "sonner";
 import { MediaUpload } from "@/components/MediaUpload";
 import { SearchableCombobox } from "@/components/SearchableCombobox";
 import { MessagePreview } from "@/components/MessagePreview";
+import { getFullName } from "@/lib/utils";
 import type { Id } from "@convex/_generated/dataModel";
-
-type MediaData = {
-  storageId: Id<"_storage">;
-  mediaType: "image" | "video" | "document" | "audio";
-  fileName: string;
-};
+import type { MediaData } from "@/lib/types";
 
 export function SendMessagePage() {
   const connectedInstances = useQuery(api.instances.listConnected);
@@ -36,11 +32,13 @@ export function SendMessagePage() {
   );
   const instanceName = selectedInstance?.name;
 
-  const handleMediaUpload = useCallback((data: MediaData) => {
-    setMedia(data);
-  }, []);
+  useEffect(() => {
+    if (connectedInstances?.length === 1 && !selectedInstanceId) {
+      setSelectedInstanceId(connectedInstances[0]!._id);
+    }
+  }, [connectedInstances, selectedInstanceId]);
 
-  const handleSend = useCallback(async () => {
+  async function handleSend(): Promise<void> {
     if (!selectedPhone || !message.trim() || !instanceName) return;
 
     setIsSending(true);
@@ -86,16 +84,7 @@ export function SendMessagePage() {
     } finally {
       setIsSending(false);
     }
-  }, [
-    selectedPhone,
-    message,
-    instanceName,
-    selectedInstanceId,
-    media,
-    sendText,
-    sendMediaAction,
-    logMessage,
-  ]);
+  }
 
   if (connectedInstances === undefined) {
     return (
@@ -103,11 +92,6 @@ export function SendMessagePage() {
         <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
       </div>
     );
-  }
-
-  // Auto-select if only one instance
-  if (connectedInstances.length === 1 && !selectedInstanceId) {
-    setSelectedInstanceId(connectedInstances[0]!._id);
   }
 
   const canSend =
@@ -121,7 +105,7 @@ export function SendMessagePage() {
   }));
 
   const contactOptions = contacts.results.map((contact) => {
-    const fullName = [contact.firstName, contact.lastName].filter(Boolean).join(" ");
+    const fullName = getFullName(contact);
     return {
       value: contact.phone,
       label: fullName ? `${fullName} (${contact.phone})` : contact.phone,
@@ -130,7 +114,7 @@ export function SendMessagePage() {
 
   const selectedContact = contacts.results.find((c) => c.phone === selectedPhone);
   const selectedContactName = selectedContact
-    ? [selectedContact.firstName, selectedContact.lastName].filter(Boolean).join(" ") || undefined
+    ? getFullName(selectedContact) || undefined
     : undefined;
 
   return (
@@ -141,10 +125,8 @@ export function SendMessagePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Form card */}
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6">
           <div className="space-y-4">
-            {/* Instance Selector — only show if multiple instances */}
             {connectedInstances.length > 1 && (
               <div>
                 <label className="block text-sm font-medium text-zinc-300 mb-1">
@@ -159,7 +141,6 @@ export function SendMessagePage() {
               </div>
             )}
 
-            {/* Contact Selector */}
             <div>
               <label
                 htmlFor="contact-select"
@@ -175,7 +156,6 @@ export function SendMessagePage() {
               />
             </div>
 
-            {/* Message Input */}
             <div>
               <label
                 htmlFor="message-input"
@@ -194,10 +174,8 @@ export function SendMessagePage() {
               />
             </div>
 
-            {/* Media Upload */}
-            <MediaUpload onUpload={handleMediaUpload} />
+            <MediaUpload onUpload={setMedia} />
 
-            {/* Send Button */}
             <div className="pt-2">
               <button
                 onClick={handleSend}
@@ -216,7 +194,6 @@ export function SendMessagePage() {
           </div>
         </div>
 
-        {/* Preview card */}
         <div>
           <p className="text-sm font-medium text-zinc-300 mb-2">Preview</p>
           <MessagePreview

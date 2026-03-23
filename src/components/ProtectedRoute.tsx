@@ -1,9 +1,9 @@
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useConvexAuth } from "convex/react";
 import { Loader2 } from "lucide-react";
 
-export function ProtectedRoute({ children }: { children: ReactNode }) {
+export function ProtectedRoute({ children }: { children: ReactNode }): ReactNode {
   const { isAuthenticated, isLoading } = useConvexAuth();
 
   if (isLoading) {

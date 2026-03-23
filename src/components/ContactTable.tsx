@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Pencil, Trash2, Users, Loader2, ChevronUp, ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getFullName } from "@/lib/utils";
 
 interface Contact {
   _id: string;
@@ -13,10 +13,6 @@ interface Contact {
   sentAt?: number;
   tags?: string[];
   engagementScore?: number;
-}
-
-function contactDisplayName(c: Contact): string {
-  return [c.firstName, c.lastName].filter(Boolean).join(" ");
 }
 
 interface ContactTableProps {
@@ -66,6 +62,42 @@ const defaultStatus = {
   dot: "bg-zinc-400",
 };
 
+function StatusBadge({ status }: { status: string }) {
+  const config = statusConfig[status] ?? defaultStatus;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium",
+        config.bg,
+        config.text,
+      )}
+    >
+      <span className={cn("w-1.5 h-1.5 rounded-full", config.dot)} />
+      {status}
+    </span>
+  );
+}
+
+const ENGAGEMENT_COLORS = [
+  { min: 75, color: "bg-blue-500" },
+  { min: 50, color: "bg-emerald-500" },
+  { min: 25, color: "bg-amber-500" },
+  { min: 0, color: "bg-red-500" },
+] as const;
+
+function EngagementDot({ score }: { score?: number | null }) {
+  if (score === undefined || score === null) {
+    return <span className="text-zinc-600">&mdash;</span>;
+  }
+  const dotColor = ENGAGEMENT_COLORS.find((c) => score >= c.min)?.color ?? "bg-red-500";
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={cn("w-2 h-2 rounded-full", dotColor)} />
+      <span className="text-xs text-zinc-400">{score}</span>
+    </span>
+  );
+}
+
 export function ContactTable({
   contacts,
   canLoadMore,
@@ -100,7 +132,7 @@ export function ContactTable({
     return [...contacts].sort((a, b) => {
       let cmp: number;
       if (sortField === "name") {
-        cmp = contactDisplayName(a).localeCompare(contactDisplayName(b));
+        cmp = getFullName(a).localeCompare(getFullName(b));
       } else {
         cmp = (statusPriority[a.status] ?? 99) - (statusPriority[b.status] ?? 99);
       }
@@ -164,9 +196,7 @@ export function ContactTable({
 
       {/* Mobile card layout */}
       <div className="md:hidden space-y-3">
-        {sortedContacts.map((contact) => {
-          const config = statusConfig[contact.status] ?? defaultStatus;
-          return (
+        {sortedContacts.map((contact) => (
             <div
               key={contact._id}
               className="bg-zinc-900 rounded-xl border border-zinc-800 p-4"
@@ -178,11 +208,11 @@ export function ContactTable({
                     checked={selected.has(contact._id)}
                     onChange={() => toggleSelect(contact._id)}
                     className="rounded border-zinc-600 bg-zinc-800 accent-emerald-500 mt-0.5"
-                    aria-label={`Select ${contactDisplayName(contact) || contact.phone}`}
+                    aria-label={`Select ${getFullName(contact) || contact.phone}`}
                   />
                   <div>
                     <p className="text-sm font-medium text-zinc-200">
-                      {contactDisplayName(contact) || (
+                      {getFullName(contact) || (
                         <span className="text-zinc-600">&mdash;</span>
                       )}
                     </p>
@@ -191,18 +221,7 @@ export function ContactTable({
                     </p>
                   </div>
                 </div>
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium",
-                    config.bg,
-                    config.text,
-                  )}
-                >
-                  <span
-                    className={cn("w-1.5 h-1.5 rounded-full", config.dot)}
-                  />
-                  {contact.status}
-                </span>
+                <StatusBadge status={contact.status} />
               </div>
               <div className="flex justify-end gap-1 mt-2">
                 <button
@@ -221,8 +240,7 @@ export function ContactTable({
                 </button>
               </div>
             </div>
-          );
-        })}
+          ))}
       </div>
 
       {/* Desktop table layout */}
@@ -277,9 +295,7 @@ export function ContactTable({
             </tr>
           </thead>
           <tbody>
-            {sortedContacts.map((contact) => {
-              const config = statusConfig[contact.status] ?? defaultStatus;
-              return (
+            {sortedContacts.map((contact) => (
                 <tr
                   key={contact._id}
                   className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors"
@@ -290,11 +306,11 @@ export function ContactTable({
                       checked={selected.has(contact._id)}
                       onChange={() => toggleSelect(contact._id)}
                       className="rounded border-zinc-600 bg-zinc-800 accent-emerald-500"
-                      aria-label={`Select ${contactDisplayName(contact) || contact.phone}`}
+                      aria-label={`Select ${getFullName(contact) || contact.phone}`}
                     />
                   </td>
                   <td className="px-4 py-3 text-sm text-zinc-200">
-                    {contactDisplayName(contact) || (
+                    {getFullName(contact) || (
                       <span className="text-zinc-600">&mdash;</span>
                     )}
                   </td>
@@ -302,38 +318,10 @@ export function ContactTable({
                     {contact.phone}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium",
-                        config.bg,
-                        config.text,
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "w-1.5 h-1.5 rounded-full",
-                          config.dot,
-                        )}
-                      />
-                      {contact.status}
-                    </span>
+                    <StatusBadge status={contact.status} />
                   </td>
                   <td className="px-4 py-3 text-center">
-                    {(() => {
-                      const score = contact.engagementScore;
-                      if (score === undefined || score === null) return <span className="text-zinc-600">&mdash;</span>;
-                      const dotColor =
-                        score >= 75 ? "bg-blue-500" :
-                        score >= 50 ? "bg-emerald-500" :
-                        score >= 25 ? "bg-amber-500" :
-                        "bg-red-500";
-                      return (
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                          <span className="text-xs text-zinc-400">{score}</span>
-                        </span>
-                      );
-                    })()}
+                    <EngagementDot score={contact.engagementScore} />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
@@ -352,8 +340,7 @@ export function ContactTable({
                     </button>
                   </td>
                 </tr>
-              );
-            })}
+              ))}
           </tbody>
         </table>
       </div>

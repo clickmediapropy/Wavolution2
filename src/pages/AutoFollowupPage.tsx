@@ -37,6 +37,14 @@ interface SequenceForm {
 const emptyStep: StepForm = { delayMinutes: 30, messageTemplate: "" };
 const emptyForm: SequenceForm = { name: "", steps: [{ ...emptyStep }] };
 
+function formatDelay(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
+}
+
 export function AutoFollowupPage() {
   const sequences = useQuery(api.followups.list);
   const createSequence = useMutation(api.followups.create);
@@ -175,14 +183,6 @@ export function AutoFollowupPage() {
     }
   };
 
-  const formatDelay = (minutes: number): string => {
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (mins === 0) return `${hours}h`;
-    return `${hours}h ${mins}m`;
-  };
-
   if (sequences === undefined) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -198,7 +198,6 @@ export function AutoFollowupPage() {
       animate="animate"
       className="space-y-6"
     >
-      {/* Header */}
       <motion.div
         variants={staggerItemVariants}
         className="flex items-center justify-between"
@@ -225,7 +224,6 @@ export function AutoFollowupPage() {
         </button>
       </motion.div>
 
-      {/* Create / Edit Form */}
       <AnimatePresence>
         {showForm && (
           <motion.div
@@ -247,7 +245,6 @@ export function AutoFollowupPage() {
               </button>
             </div>
 
-            {/* Sequence name */}
             <div>
               <label className="block text-xs font-medium text-zinc-400 mb-1.5">
                 Sequence Name
@@ -261,7 +258,6 @@ export function AutoFollowupPage() {
               />
             </div>
 
-            {/* Steps */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-zinc-400">
@@ -281,7 +277,6 @@ export function AutoFollowupPage() {
                   key={index}
                   className="relative bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-4 space-y-3"
                 >
-                  {/* Step header */}
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-amber-400/80">
                       Step {index + 1}
@@ -297,7 +292,6 @@ export function AutoFollowupPage() {
                     )}
                   </div>
 
-                  {/* Delay */}
                   <div>
                     <label className="block text-xs text-zinc-500 mb-1">
                       Delay (minutes)
@@ -324,7 +318,6 @@ export function AutoFollowupPage() {
                     </p>
                   </div>
 
-                  {/* Message template */}
                   <div>
                     <label className="block text-xs text-zinc-500 mb-1">
                       Message
@@ -346,7 +339,6 @@ export function AutoFollowupPage() {
               ))}
             </div>
 
-            {/* Save / Cancel */}
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={closeForm}
@@ -371,7 +363,6 @@ export function AutoFollowupPage() {
         )}
       </AnimatePresence>
 
-      {/* Sequence list */}
       {sequences.length === 0 ? (
         <motion.div
           variants={staggerItemVariants}
@@ -401,9 +392,7 @@ export function AutoFollowupPage() {
               key={seq._id}
               className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden"
             >
-              {/* Sequence header row */}
               <div className="flex items-center gap-4 px-5 py-4">
-                {/* Active toggle */}
                 <button
                   onClick={() => handleToggle(seq._id)}
                   disabled={togglingId === seq._id}
@@ -425,7 +414,6 @@ export function AutoFollowupPage() {
                   )}
                 </button>
 
-                {/* Name + meta */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-semibold text-zinc-100 truncate">
@@ -452,7 +440,6 @@ export function AutoFollowupPage() {
                   </p>
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center gap-1">
                   {confirmDeleteId === seq._id ? (
                     <div className="flex items-center gap-1">
@@ -512,7 +499,6 @@ export function AutoFollowupPage() {
                 </div>
               </div>
 
-              {/* Expanded steps */}
               <AnimatePresence>
                 {expandedId === seq._id && (
                   <motion.div
@@ -528,7 +514,6 @@ export function AutoFollowupPage() {
                           key={i}
                           className="flex items-start gap-3 pl-2"
                         >
-                          {/* Timeline dot + line */}
                           <div className="flex flex-col items-center pt-1">
                             <div className="w-2.5 h-2.5 rounded-full bg-amber-500/60 ring-2 ring-amber-500/20" />
                             {i < seq.steps.length - 1 && (
@@ -536,7 +521,6 @@ export function AutoFollowupPage() {
                             )}
                           </div>
 
-                          {/* Step content */}
                           <div className="flex-1 min-w-0 pb-2">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xs font-medium text-amber-400/80">
@@ -559,7 +543,6 @@ export function AutoFollowupPage() {
             </div>
           ))}
 
-          {/* Footer count */}
           <div className="px-1">
             <p className="text-xs text-zinc-500">
               {sequences.length}{" "}

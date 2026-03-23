@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Clock, Zap, Activity, Timer, ChevronRight } from "lucide-react";
+import { Activity, ChevronRight, Clock, Timer, Zap } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface DelayConfigProps {
   value: number; // delay in seconds
@@ -10,67 +11,27 @@ interface DelayConfigProps {
 const MIN_DELAY = 1;
 const MAX_DELAY = 60;
 
-const PRESETS = [
-  { 
-    value: 1, 
-    label: "Fast", 
-    description: "Quick delivery",
-    icon: Zap,
-    color: "amber",
-    warning: "Higher risk of rate limiting"
-  },
-  { 
-    value: 5, 
-    label: "Normal", 
-    description: "Balanced speed",
-    icon: Activity,
-    color: "emerald",
-    warning: null
-  },
-  { 
-    value: 10, 
-    label: "Slow", 
-    description: "Safer delivery",
-    icon: Timer,
-    color: "blue",
-    warning: null
-  },
-  { 
-    value: 0, 
-    label: "Custom", 
-    description: "Set your own",
-    icon: Clock,
-    color: "zinc",
-    warning: null
-  },
+interface Preset {
+  value: number;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  color: keyof typeof COLOR_CLASSES;
+}
+
+const PRESETS: Preset[] = [
+  { value: 1, label: "Fast", description: "Quick delivery", icon: Zap, color: "amber" },
+  { value: 5, label: "Normal", description: "Balanced speed", icon: Activity, color: "emerald" },
+  { value: 10, label: "Slow", description: "Safer delivery", icon: Timer, color: "blue" },
+  { value: 0, label: "Custom", description: "Set your own", icon: Clock, color: "zinc" },
 ];
 
-const colorClasses: Record<string, { bg: string; text: string; border: string; ring: string }> = {
-  amber: { 
-    bg: "bg-amber-500/10", 
-    text: "text-amber-400", 
-    border: "border-amber-500/30",
-    ring: "ring-amber-500/20"
-  },
-  emerald: { 
-    bg: "bg-emerald-500/10", 
-    text: "text-emerald-400", 
-    border: "border-emerald-500/30",
-    ring: "ring-emerald-500/20"
-  },
-  blue: { 
-    bg: "bg-blue-500/10", 
-    text: "text-blue-400", 
-    border: "border-blue-500/30",
-    ring: "ring-blue-500/20"
-  },
-  zinc: { 
-    bg: "bg-zinc-500/10", 
-    text: "text-zinc-400", 
-    border: "border-zinc-500/30",
-    ring: "ring-zinc-500/20"
-  },
-};
+const COLOR_CLASSES = {
+  amber: { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/30", ring: "ring-amber-500/20" },
+  emerald: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30", ring: "ring-emerald-500/20" },
+  blue: { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/30", ring: "ring-blue-500/20" },
+  zinc: { bg: "bg-zinc-500/10", text: "text-zinc-400", border: "border-zinc-500/30", ring: "ring-zinc-500/20" },
+} as const;
 
 export function DelayConfig({ value, onChange }: DelayConfigProps) {
   const [isCustom, setIsCustom] = useState(value !== 1 && value !== 5 && value !== 10);
@@ -88,7 +49,7 @@ export function DelayConfig({ value, onChange }: DelayConfigProps) {
   };
 
   const selectedPreset = PRESETS.find(p => p.value === value) ?? PRESETS[3]!;
-  const colors = colorClasses[selectedPreset!.color]!;
+  const colors = COLOR_CLASSES[selectedPreset.color];
 
   return (
     <div className="space-y-4">
@@ -108,7 +69,6 @@ export function DelayConfig({ value, onChange }: DelayConfigProps) {
             </span>
           </div>
           
-          {/* Tooltip */}
           {showTooltip && (
             <motion.div
               initial={{ opacity: 0, y: 5 }}
@@ -122,13 +82,12 @@ export function DelayConfig({ value, onChange }: DelayConfigProps) {
         </div>
       </div>
 
-      {/* Preset buttons */}
       <div className="grid grid-cols-4 gap-2">
         {PRESETS.map((preset) => {
           const isSelected = preset.value === 0 
             ? isCustom 
             : value === preset.value;
-          const presetColors = colorClasses[preset.color]!;
+          const presetColors = COLOR_CLASSES[preset.color];
           const Icon = preset.icon;
 
           return (
@@ -155,7 +114,6 @@ export function DelayConfig({ value, onChange }: DelayConfigProps) {
         })}
       </div>
 
-      {/* Custom slider */}
       <motion.div
         initial={false}
         animate={{ 
@@ -167,16 +125,12 @@ export function DelayConfig({ value, onChange }: DelayConfigProps) {
         <div className="pt-2 space-y-4">
           <div className="flex items-center gap-4">
             <div className="flex-1 relative">
-              {/* Track background */}
               <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-2 bg-zinc-800 rounded-full" />
-              
-              {/* Progress fill */}
               <motion.div
                 className="absolute left-0 top-1/2 -translate-y-1/2 h-2 bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full"
                 style={{ width: `${((value - MIN_DELAY) / (MAX_DELAY - MIN_DELAY)) * 100}%` }}
               />
               
-              {/* Slider input */}
               <input
                 type="range"
                 min={MIN_DELAY}
@@ -206,7 +160,6 @@ export function DelayConfig({ value, onChange }: DelayConfigProps) {
               />
             </div>
 
-            {/* Number input */}
             <div className="flex items-center gap-1">
               <input
                 type="number"
@@ -231,7 +184,6 @@ export function DelayConfig({ value, onChange }: DelayConfigProps) {
         </div>
       </motion.div>
 
-      {/* Info text */}
       <div className="flex items-start gap-3 p-3 bg-zinc-800/30 rounded-xl">
         <Clock className="w-4 h-4 text-zinc-500 mt-0.5 flex-shrink-0" />
         <div>

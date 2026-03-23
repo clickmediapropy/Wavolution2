@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -12,12 +12,7 @@ import { MediaUpload } from "@/components/MediaUpload";
 import { DelayConfig } from "@/components/DelayConfig";
 import { SearchableCombobox } from "@/components/SearchableCombobox";
 import type { Id } from "@convex/_generated/dataModel";
-
-type MediaData = {
-  storageId: Id<"_storage">;
-  mediaType: "image" | "video" | "document" | "audio";
-  fileName: string;
-};
+import type { MediaData } from "@/lib/types";
 
 const STEPS = [
   { label: "Recipients" },
@@ -39,18 +34,16 @@ export function BulkCampaignPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
 
-  // Step 1: Recipients
   const [recipientType, setRecipientType] = useState<
     "all" | "pending" | "manual"
   >("all");
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
 
-  // Step 2: Message
   const [selectedInstanceId, setSelectedInstanceId] = useState("");
   const [campaignName, setCampaignName] = useState("");
   const [messageTemplate, setMessageTemplate] = useState("");
   const [media, setMedia] = useState<MediaData | null>(null);
-  const [delay, setDelay] = useState(5); // seconds
+  const [delay, setDelay] = useState(5);
 
   const allContacts = contacts.results;
 
@@ -65,10 +58,11 @@ export function BulkCampaignPage() {
     }
   }, [recipientType, allContacts, selectedContactIds]);
 
-  // Auto-select if only one connected instance
-  if (connectedInstances?.length === 1 && !selectedInstanceId) {
-    setSelectedInstanceId(connectedInstances[0]!._id);
-  }
+  useEffect(() => {
+    if (connectedInstances?.length === 1 && !selectedInstanceId) {
+      setSelectedInstanceId(connectedInstances[0]!._id);
+    }
+  }, [connectedInstances, selectedInstanceId]);
 
   const instanceOptions = (connectedInstances ?? []).map((inst) => ({
     value: inst._id,
@@ -80,10 +74,6 @@ export function BulkCampaignPage() {
   const canProceedStep0 = recipientCount > 0;
   const canProceedStep1 =
     campaignName.trim() && messageTemplate.trim() && selectedInstanceId;
-
-  const handleMediaUpload = useCallback((data: MediaData) => {
-    setMedia(data);
-  }, []);
 
   const handleCreate = async () => {
     setIsCreating(true);
@@ -101,7 +91,7 @@ export function BulkCampaignPage() {
         messageTemplate: messageTemplate.trim(),
         hasMedia: media !== null,
         mediaStorageIds: media ? [media.storageId] : undefined,
-        delay: delay * 1000, // convert to ms
+        delay: delay * 1000,
         total: recipientCount,
       });
 
@@ -117,7 +107,6 @@ export function BulkCampaignPage() {
     }
   };
 
-  // Preview message with sample data
   const previewMessage = useMemo(() => {
     return messageTemplate
       .replace(/\{name\}/g, "John")
@@ -142,7 +131,6 @@ export function BulkCampaignPage() {
       <StepIndicator steps={STEPS} currentStep={currentStep} />
 
       <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6">
-        {/* Step 1: Recipients */}
         {currentStep === 0 && (
           <RecipientSelector
             contacts={allContacts}
@@ -153,10 +141,8 @@ export function BulkCampaignPage() {
           />
         )}
 
-        {/* Step 2: Message */}
         {currentStep === 1 && (
           <div className="space-y-6">
-            {/* Instance selector — only show if multiple */}
             {instanceOptions.length > 1 && (
               <div>
                 <label className="block text-sm font-medium text-zinc-300 mb-1">
@@ -193,13 +179,12 @@ export function BulkCampaignPage() {
               onChange={setMessageTemplate}
             />
 
-            <MediaUpload onUpload={handleMediaUpload} />
+            <MediaUpload onUpload={setMedia} />
 
             <DelayConfig value={delay} onChange={setDelay} />
           </div>
         )}
 
-        {/* Step 3: Review */}
         {currentStep === 2 && (
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-zinc-100">
@@ -207,38 +192,23 @@ export function BulkCampaignPage() {
             </h3>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-zinc-800 rounded-lg p-4">
-                <p className="text-xs text-zinc-500 mb-1">Campaign Name</p>
-                <p className="text-sm font-medium text-zinc-200">
-                  {campaignName}
-                </p>
-              </div>
-              <div className="bg-zinc-800 rounded-lg p-4">
-                <p className="text-xs text-zinc-500 mb-1">Instance</p>
-                <p className="text-sm font-medium text-zinc-200">
-                  {connectedInstances?.find((i) => i._id === selectedInstanceId)
-                    ?.name ?? "—"}
-                </p>
-              </div>
-              <div className="bg-zinc-800 rounded-lg p-4">
-                <p className="text-xs text-zinc-500 mb-1">Recipients</p>
-                <p className="text-sm font-medium text-zinc-200">
-                  {recipientCount}{" "}
-                  <span className="text-zinc-500">({recipientType})</span>
-                </p>
-              </div>
-              <div className="bg-zinc-800 rounded-lg p-4">
-                <p className="text-xs text-zinc-500 mb-1">Delay</p>
-                <p className="text-sm font-medium text-zinc-200">
-                  {delay}s between messages
-                </p>
-              </div>
-              <div className="bg-zinc-800 rounded-lg p-4">
-                <p className="text-xs text-zinc-500 mb-1">Media</p>
-                <p className="text-sm font-medium text-zinc-200">
-                  {media ? media.fileName : "None"}
-                </p>
-              </div>
+              <ReviewCard label="Campaign Name" value={campaignName} />
+              <ReviewCard
+                label="Instance"
+                value={
+                  connectedInstances?.find((i) => i._id === selectedInstanceId)
+                    ?.name ?? "\u2014"
+                }
+              />
+              <ReviewCard
+                label="Recipients"
+                value={`${recipientCount} (${recipientType})`}
+              />
+              <ReviewCard label="Delay" value={`${delay}s between messages`} />
+              <ReviewCard
+                label="Media"
+                value={media ? media.fileName : "None"}
+              />
             </div>
 
             <div>
@@ -253,7 +223,6 @@ export function BulkCampaignPage() {
           </div>
         )}
 
-        {/* Navigation buttons */}
         <div className="flex items-center justify-between mt-8 pt-4 border-t border-zinc-800">
           <button
             type="button"
@@ -295,6 +264,15 @@ export function BulkCampaignPage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ReviewCard({ label, value }: { label: string; value: string }): React.ReactElement {
+  return (
+    <div className="bg-zinc-800 rounded-lg p-4">
+      <p className="text-xs text-zinc-500 mb-1">{label}</p>
+      <p className="text-sm font-medium text-zinc-200">{value}</p>
     </div>
   );
 }

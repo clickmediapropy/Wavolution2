@@ -5,7 +5,7 @@ import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { GitMerge, ArrowLeft, Phone, User, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { getFullName } from "@/lib/utils";
+import { cn, getFullName } from "@/lib/utils";
 
 type DuplicatePair = NonNullable<ReturnType<typeof useQuery<typeof api.contacts.findDuplicates>>>[number];
 
@@ -67,13 +67,12 @@ function ContactCard({
       {contact.status && (
         <div className="mt-2">
           <span
-            className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-              contact.status === "sent"
-                ? "bg-emerald-500/15 text-emerald-400"
-                : contact.status === "failed"
-                  ? "bg-red-500/15 text-red-400"
-                  : "bg-amber-500/15 text-amber-400"
-            }`}
+            className={cn(
+              "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
+              contact.status === "sent" && "bg-emerald-500/15 text-emerald-400",
+              contact.status === "failed" && "bg-red-500/15 text-red-400",
+              contact.status !== "sent" && contact.status !== "failed" && "bg-amber-500/15 text-amber-400",
+            )}
           >
             {contact.status}
           </span>

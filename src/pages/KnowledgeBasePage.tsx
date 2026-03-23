@@ -81,7 +81,6 @@ export function KnowledgeBasePage() {
       animate="animate"
       className="space-y-6"
     >
-      {/* Header */}
       <motion.div variants={staggerItemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-500/10 rounded-xl">
@@ -112,7 +111,6 @@ export function KnowledgeBasePage() {
         </button>
       </motion.div>
 
-      {/* Create form */}
       <AnimatePresence>
         {showForm && (
           <motion.form
@@ -186,7 +184,6 @@ export function KnowledgeBasePage() {
         )}
       </AnimatePresence>
 
-      {/* Entries grid */}
       {entries.length === 0 ? (
         <motion.div
           variants={staggerItemVariants}
@@ -276,7 +273,6 @@ export function KnowledgeBasePage() {
         </motion.div>
       )}
 
-      {/* Summary footer */}
       {entries.length > 0 && (
         <motion.div
           variants={staggerItemVariants}

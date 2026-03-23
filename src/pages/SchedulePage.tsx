@@ -72,7 +72,7 @@ export function SchedulePage() {
   const isScheduleInPast =
     scheduledTimestamp !== null && scheduledTimestamp <= Date.now();
 
-  const handleSchedule = async () => {
+  async function handleSchedule(): Promise<void> {
     if (!scheduledTimestamp || isScheduleInPast) {
       toast.error("Scheduled time must be in the future");
       return;
@@ -102,7 +102,7 @@ export function SchedulePage() {
     } finally {
       setIsCreating(false);
     }
-  };
+  }
 
   if (contacts.status === "LoadingFirstPage") {
     return (

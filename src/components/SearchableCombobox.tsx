@@ -2,15 +2,16 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Check, ChevronDown, X } from "lucide-react";
 import Fuse from "fuse.js";
+import { cn } from "@/lib/utils";
 
-export type ComboboxOption = {
+export interface ComboboxOption {
   value: string;
   label: string;
   subtitle?: string;
   icon?: React.ReactNode;
-};
+}
 
-type SearchableComboboxProps = {
+interface SearchableComboboxProps {
   options: ComboboxOption[];
   value: string;
   onChange: (value: string) => void;
@@ -18,7 +19,7 @@ type SearchableComboboxProps = {
   label?: string;
   error?: string;
   disabled?: boolean;
-};
+}
 
 const fuseOptions = {
   keys: ['label', 'subtitle', 'value'],
@@ -179,13 +180,13 @@ export function SearchableCombobox({
             }
           }}
           onKeyDown={handleKeyDown}
-          className={`
-            w-full pl-9 pr-10 py-2.5 bg-zinc-800 border rounded-xl text-zinc-100 
-            placeholder:text-zinc-500 outline-none transition-all
-            focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50
-            disabled:opacity-50 disabled:cursor-not-allowed
-            ${error ? "border-red-500/50 focus:border-red-500" : "border-zinc-700"}
-          `}
+          className={cn(
+            "w-full pl-9 pr-10 py-2.5 bg-zinc-800 border rounded-xl text-zinc-100",
+            "placeholder:text-zinc-500 outline-none transition-all",
+            "focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+            error ? "border-red-500/50 focus:border-red-500" : "border-zinc-700",
+          )}
         />
         
         {/* Clear button or dropdown arrow */}
@@ -199,10 +200,10 @@ export function SearchableCombobox({
               <X className="w-4 h-4" />
             </button>
           ) : (
-            <ChevronDown className={`
-              w-4 h-4 text-zinc-500 transition-transform duration-200
-              ${isOpen ? "rotate-180" : ""}
-            `} />
+            <ChevronDown className={cn(
+              "w-4 h-4 text-zinc-500 transition-transform duration-200",
+              isOpen && "rotate-180",
+            )} />
           )}
         </div>
       </div>
@@ -241,15 +242,14 @@ export function SearchableCombobox({
                     select(opt);
                   }}
                   onMouseEnter={() => setActiveIndex(i)}
-                  className={`
-                    px-4 py-3 cursor-pointer transition-all border-b border-zinc-800/50 last:border-0
-                    flex items-center gap-3
-                    ${i === activeIndex
+                  className={cn(
+                    "px-4 py-3 cursor-pointer transition-all border-b border-zinc-800/50 last:border-0",
+                    "flex items-center gap-3",
+                    i === activeIndex
                       ? "bg-emerald-500/10 text-emerald-400"
-                      : "text-zinc-200 hover:bg-zinc-800"
-                    }
-                    ${opt.value === value ? "bg-emerald-500/5" : ""}
-                  `}
+                      : "text-zinc-200 hover:bg-zinc-800",
+                    opt.value === value && "bg-emerald-500/5",
+                  )}
                 >
                   {opt.icon && (
                     <span className={i === activeIndex ? "text-emerald-400" : "text-zinc-500"}>
@@ -262,10 +262,10 @@ export function SearchableCombobox({
                       {opt.label}
                     </div>
                     {opt.subtitle && (
-                      <div className={`
-                        text-xs truncate
-                        ${i === activeIndex ? "text-emerald-400/70" : "text-zinc-500"}
-                      `}>
+                      <div className={cn(
+                        "text-xs truncate",
+                        i === activeIndex ? "text-emerald-400/70" : "text-zinc-500",
+                      )}>
                         {opt.subtitle}
                       </div>
                     )}

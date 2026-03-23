@@ -1,8 +1,8 @@
-import { Wifi, WifiOff, RefreshCw, AlertCircle } from "lucide-react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { useState } from "react";
+import { motion } from "framer-motion";
+import { AlertCircle, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Area, AreaChart, ResponsiveContainer } from "recharts";
 
 interface ConnectionStatusProps {
   connected: boolean;
@@ -12,7 +12,12 @@ interface ConnectionStatusProps {
   lastDisconnectedAt?: number | null;
 }
 
-function ConnectionSparkline({ data, connected }: { data: number[]; connected: boolean }) {
+interface ConnectionSparklineProps {
+  data: number[];
+  connected: boolean;
+}
+
+function ConnectionSparkline({ data, connected }: ConnectionSparklineProps) {
   const chartData = data.map((value, index) => ({ value, index }));
   const strokeColor = connected ? "#10b981" : "#ef4444";
 
@@ -52,6 +57,12 @@ function formatTimeAgo(timestamp: number): string {
   return `${days}d ago`;
 }
 
+function getHealthColors(rate: number): { bg: string; text: string } {
+  if (rate >= 90) return { bg: "bg-emerald-500", text: "text-emerald-400" };
+  if (rate >= 70) return { bg: "bg-amber-500", text: "text-amber-400" };
+  return { bg: "bg-red-500", text: "text-red-400" };
+}
+
 export function ConnectionStatus({
   connected,
   href,
@@ -68,19 +79,7 @@ export function ConnectionStatus({
     setTimeout(() => setIsReconnecting(false), 2000);
   };
 
-  const healthColor =
-    successRate >= 90
-      ? "bg-emerald-500"
-      : successRate >= 70
-        ? "bg-amber-500"
-        : "bg-red-500";
-
-  const healthTextColor =
-    successRate >= 90
-      ? "text-emerald-400"
-      : successRate >= 70
-        ? "text-amber-400"
-        : "text-red-400";
+  const { bg: healthColor, text: healthTextColor } = getHealthColors(successRate);
 
   const card = (
     <motion.div
@@ -148,7 +147,6 @@ export function ConnectionStatus({
         )}
       </div>
 
-      {/* Connection health indicator — real success rate */}
       {connected && (
         <div className="mt-3 pt-3 border-t border-zinc-800 flex items-center gap-2">
           <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
@@ -165,7 +163,6 @@ export function ConnectionStatus({
         </div>
       )}
 
-      {/* Disconnection timestamp — real data */}
       {!connected && !isReconnecting && lastDisconnectedAt && (
         <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-400/80">
           <AlertCircle className="w-3 h-3" />

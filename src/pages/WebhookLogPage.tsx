@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { motion } from "framer-motion";
@@ -11,7 +11,6 @@ import {
   Loader2,
 } from "lucide-react";
 import {
-  pageVariants,
   staggerContainerVariants,
   staggerItemVariants,
 } from "@/lib/transitions";
@@ -46,12 +45,13 @@ function StatusBadge({ status }: { status: "success" | "error" }) {
 function ExpandableData({ data }: { data: string }) {
   const [expanded, setExpanded] = useState(false);
 
-  let formatted = data;
-  try {
-    formatted = JSON.stringify(JSON.parse(data), null, 2);
-  } catch {
-    // keep raw string
-  }
+  const formatted = useMemo(() => {
+    try {
+      return JSON.stringify(JSON.parse(data), null, 2);
+    } catch {
+      return data;
+    }
+  }, [data]);
 
   const preview = data.length > 80 ? data.slice(0, 80) + "..." : data;
 
@@ -84,10 +84,9 @@ export function WebhookLogPage() {
   return (
     <motion.div
       className="mx-auto max-w-6xl px-4 py-8"
-      variants={pageVariants}
+      variants={staggerContainerVariants}
       initial="initial"
       animate="animate"
-      exit="exit"
     >
       {/* Header */}
       <div className="mb-8 flex items-center gap-3">

@@ -37,13 +37,18 @@ export function QuickRepliesPage() {
   const [deletingId, setDeletingId] = useState<Id<"quickReplies"> | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<Id<"quickReplies"> | null>(null);
 
-  const openCreateForm = () => {
+  function openCreateForm(): void {
     setEditingId(null);
     setForm(emptyForm);
     setShowForm(true);
-  };
+  }
 
-  const openEditForm = (reply: { _id: Id<"quickReplies">; shortcut: string; text: string; category?: string }) => {
+  function openEditForm(reply: {
+    _id: Id<"quickReplies">;
+    shortcut: string;
+    text: string;
+    category?: string;
+  }): void {
     setEditingId(reply._id);
     setForm({
       shortcut: reply.shortcut.replace(/^\//, ""),
@@ -51,15 +56,15 @@ export function QuickRepliesPage() {
       category: reply.category ?? "",
     });
     setShowForm(true);
-  };
+  }
 
-  const closeForm = () => {
+  function closeForm(): void {
     setShowForm(false);
     setEditingId(null);
     setForm(emptyForm);
-  };
+  }
 
-  const handleSave = async () => {
+  async function handleSave(): Promise<void> {
     const shortcut = form.shortcut.trim();
     const text = form.text.trim();
 
@@ -94,9 +99,9 @@ export function QuickRepliesPage() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }
 
-  const handleDelete = async (id: Id<"quickReplies">) => {
+  async function handleDelete(id: Id<"quickReplies">): Promise<void> {
     setDeletingId(id);
     try {
       await removeReply({ id });
@@ -107,7 +112,7 @@ export function QuickRepliesPage() {
     } finally {
       setDeletingId(null);
     }
-  };
+  }
 
   if (replies === undefined) {
     return (

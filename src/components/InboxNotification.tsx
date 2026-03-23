@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Bell, BellOff } from "lucide-react";
@@ -6,18 +6,14 @@ import { toast } from "sonner";
 
 const NOTIFICATION_PERMISSION_KEY = "inbox-notifications-enabled";
 
-type ConversationSummary = {
+interface ConversationSummary {
   _id: string;
   contactName?: string;
   phone: string;
   unreadCount: number;
   lastMessageText?: string;
-};
+}
 
-/**
- * Returns the stored notification preference from localStorage.
- * "granted" means the user opted in AND the browser granted permission.
- */
 function getStoredPermission(): boolean {
   try {
     return localStorage.getItem(NOTIFICATION_PERMISSION_KEY) === "true";
@@ -26,24 +22,19 @@ function getStoredPermission(): boolean {
   }
 }
 
-function setStoredPermission(enabled: boolean) {
+function setStoredPermission(enabled: boolean): void {
   try {
     localStorage.setItem(NOTIFICATION_PERMISSION_KEY, String(enabled));
   } catch {
-    // localStorage unavailable (private browsing, etc.)
+    // localStorage may be unavailable in private browsing
   }
 }
 
-/**
- * Hook that tracks conversation list changes and fires browser notifications
- * (+ Sonner toasts when the tab is not focused) for new incoming messages.
- */
 export function useInboxNotifications() {
   const conversations = useQuery(api.conversations.list, { archived: false });
   const prevConversationsRef = useRef<Map<string, number> | null>(null);
   const [enabled, setEnabled] = useState(getStoredPermission);
 
-  // Sync enabled state with what the browser actually permits
   useEffect(() => {
     if (enabled && typeof Notification !== "undefined" && Notification.permission !== "granted") {
       setEnabled(false);
@@ -89,7 +80,6 @@ export function useInboxNotifications() {
     toast.success("Notifications disabled");
   }, []);
 
-  // Detect new unread messages by comparing current vs previous unread counts
   useEffect(() => {
     if (!conversations) return;
 
@@ -99,7 +89,6 @@ export function useInboxNotifications() {
 
     const prevMap = prevConversationsRef.current;
 
-    // On first load, just store the snapshot — don't notify
     if (prevMap === null) {
       prevConversationsRef.current = currentMap;
       return;
@@ -110,7 +99,6 @@ export function useInboxNotifications() {
       return;
     }
 
-    // Find conversations whose unreadCount increased
     for (const conv of conversations) {
       const prevUnread = prevMap.get(conv._id) ?? 0;
       if (conv.unreadCount > prevUnread) {
@@ -124,30 +112,23 @@ export function useInboxNotifications() {
   return { enabled, requestPermission, disableNotifications };
 }
 
-/**
- * Fire a browser Notification and, if the page is not focused, a Sonner toast.
- */
-function fireNotification(conv: ConversationSummary) {
+function fireNotification(conv: ConversationSummary): void {
   const title = conv.contactName || conv.phone;
   const body = conv.lastMessageText || "New message";
 
-  // Browser notification (works even when tab is in background)
   if (typeof Notification !== "undefined" && Notification.permission === "granted") {
     try {
       const notification = new Notification(title, {
         body,
         icon: "/favicon.ico",
-        tag: `inbox-${conv._id}`, // dedup rapid updates for same conversation
+        tag: `inbox-${conv._id}`,
       });
-
-      // Auto-close after 5 seconds
       setTimeout(() => notification.close(), 5000);
     } catch {
-      // Notification constructor can fail in some environments (e.g. service worker required on Android)
+      // Notification constructor can fail in some environments
     }
   }
 
-  // Sonner toast when the inbox tab is not focused
   if (document.hidden) {
     toast.info(`${title}: ${body}`, {
       duration: 5000,
@@ -155,9 +136,6 @@ function fireNotification(conv: ConversationSummary) {
   }
 }
 
-/**
- * Toggle button for the inbox header. Shows bell icon and permission state.
- */
 export function InboxNotificationToggle() {
   const { enabled, requestPermission, disableNotifications } =
     useInboxNotifications();

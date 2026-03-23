@@ -1,9 +1,13 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Home, ArrowLeft, Search, MessageSquare } from "lucide-react";
+import { ArrowLeft, Home, MessageSquare, Search } from "lucide-react";
 
-// Animated 404 digits
-function AnimatedDigit({ digit, delay }: { digit: string; delay: number }) {
+interface AnimatedDigitProps {
+  digit: string;
+  delay: number;
+}
+
+function AnimatedDigit({ digit, delay }: AnimatedDigitProps): React.ReactElement {
   return (
     <motion.span
       initial={{ opacity: 0, y: 50, rotateX: -90 }}
@@ -22,18 +26,19 @@ function AnimatedDigit({ digit, delay }: { digit: string; delay: number }) {
   );
 }
 
-// Floating element
-function FloatingElement({ 
-  children, 
-  delay = 0, 
-  duration = 3,
-  className = ""
-}: { 
-  children: React.ReactNode; 
-  delay?: number; 
+interface FloatingElementProps {
+  children: React.ReactNode;
+  delay?: number;
   duration?: number;
   className?: string;
-}) {
+}
+
+function FloatingElement({
+  children,
+  delay = 0,
+  duration = 3,
+  className = ""
+}: FloatingElementProps): React.ReactElement {
   return (
     <motion.div
       animate={{ 
@@ -53,8 +58,9 @@ function FloatingElement({
   );
 }
 
-export function NotFoundPage() {
-  const digits = ["4", "0", "4"];
+const DIGITS = ["4", "0", "4"] as const;
+
+export function NotFoundPage(): React.ReactElement {
 
   return (
     <div className="relative min-h-[70vh] flex flex-col items-center justify-center px-4 overflow-hidden">
@@ -109,7 +115,7 @@ export function NotFoundPage() {
 
         {/* 404 with animation */}
         <h1 className="text-8xl sm:text-9xl font-bold mb-4 tracking-tighter">
-          {digits.map((digit, i) => (
+          {DIGITS.map((digit, i) => (
             <AnimatedDigit key={i} digit={digit} delay={0.3 + i * 0.1} />
           ))}
         </h1>

@@ -39,7 +39,6 @@ interface FormState {
 
 const emptyForm: FormState = { name: "", category: "Greeting", content: "" };
 
-/** Renders template content with {{variable}} placeholders highlighted. */
 function TemplatePreview({ content }: { content: string }) {
   const parts = content.split(/(\{\{\w+\}\})/g);
   return (
@@ -74,7 +73,6 @@ export function TemplatesPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<Id<"templates"> | null>(null);
   const [filterCategory, setFilterCategory] = useState<Category | "All">("All");
 
-  // Group templates by category
   const grouped = useMemo(() => {
     if (!templates) return {};
     const filtered =
@@ -90,18 +88,18 @@ export function TemplatesPage() {
     return groups;
   }, [templates, filterCategory]);
 
-  const openCreateForm = () => {
+  function openCreateForm(): void {
     setEditingId(null);
     setForm(emptyForm);
     setShowForm(true);
-  };
+  }
 
-  const openEditForm = (template: {
+  function openEditForm(template: {
     _id: Id<"templates">;
     name: string;
     category: string;
     content: string;
-  }) => {
+  }): void {
     setEditingId(template._id);
     setForm({
       name: template.name,
@@ -111,15 +109,15 @@ export function TemplatesPage() {
       content: template.content,
     });
     setShowForm(true);
-  };
+  }
 
-  const closeForm = () => {
+  function closeForm(): void {
     setShowForm(false);
     setEditingId(null);
     setForm(emptyForm);
-  };
+  }
 
-  const handleSave = async () => {
+  async function handleSave(): Promise<void> {
     const name = form.name.trim();
     const content = form.content.trim();
 
@@ -152,9 +150,9 @@ export function TemplatesPage() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }
 
-  const handleDelete = async (id: Id<"templates">) => {
+  async function handleDelete(id: Id<"templates">): Promise<void> {
     setDeletingId(id);
     try {
       await removeTemplate({ id });
@@ -165,14 +163,13 @@ export function TemplatesPage() {
     } finally {
       setDeletingId(null);
     }
-  };
+  }
 
-  const handleCopy = (content: string) => {
+  function handleCopy(content: string): void {
     navigator.clipboard.writeText(content);
     toast.success("Copied to clipboard");
-  };
+  }
 
-  // Extract live variables from the form content for preview
   const liveVariables = useMemo(() => {
     const matches = form.content.match(/\{\{(\w+)\}\}/g);
     if (!matches) return [];

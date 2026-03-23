@@ -57,6 +57,12 @@ const MEDIA_CONFIG: Record<MediaType, { icon: typeof ImageIcon; color: string; b
   document: { icon: FileText, color: "text-blue-400", bg: "bg-blue-500/10", label: "Document" },
 };
 
+const FILE_TYPE_HINTS = [
+  { icon: ImageIcon, label: "Images", limit: "10MB" },
+  { icon: FileVideo, label: "Videos", limit: "50MB" },
+  { icon: FileText, label: "Docs", limit: "20MB" },
+] as const;
+
 function MediaIcon({ mediaType }: { mediaType: MediaType }) {
   const config = MEDIA_CONFIG[mediaType];
   const Icon = config.icon;
@@ -168,17 +174,15 @@ export function MediaUpload({ onUpload, label = "Attach Media" }: MediaUploadPro
         };
         
         newFiles.push(uploadFile);
-        
-        // Start upload immediately
-        void uploadSingleFile(uploadFile);
       }
 
       setFiles(prev => [...prev, ...newFiles]);
+
     },
     [generateThumbnail],
   );
 
-  const uploadSingleFile = async (uploadFile: UploadFile) => {
+  const uploadSingleFile = useCallback(async (uploadFile: UploadFile) => {
     setFiles(prev => prev.map(f => 
       f.id === uploadFile.id ? { ...f, status: "uploading" } : f
     ));
@@ -219,62 +223,61 @@ export function MediaUpload({ onUpload, label = "Attach Media" }: MediaUploadPro
         fileName: uploadFile.file.name,
       });
     } catch (err) {
-      setFiles(prev => prev.map(f => 
-        f.id === uploadFile.id 
-          ? { ...f, status: "error", error: err instanceof Error ? err.message : "Upload failed" } 
+      setFiles(prev => prev.map(f =>
+        f.id === uploadFile.id
+          ? { ...f, status: "error", error: err instanceof Error ? err.message : "Upload failed" }
           : f
       ));
     }
-  };
+  }, [generateUploadUrl, onUpload]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = e.target.files;
-    if (!fileList?.length) return;
-    void validateAndProcess(fileList);
-    e.target.value = ""; // Reset input
-  };
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const fileList = e.target.files;
+      if (!fileList?.length) return;
+      void validateAndProcess(fileList);
+      e.target.value = "";
+    },
+    [validateAndProcess],
+  );
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-    const fileList = e.dataTransfer.files;
-    if (fileList.length) void validateAndProcess(fileList);
-  };
+  const handleDragEvent = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
+      switch (e.type) {
+        case "drop":
+          setIsDragOver(false);
+          if (e.dataTransfer.files.length) void validateAndProcess(e.dataTransfer.files);
+          break;
+        case "dragenter":
+          setIsDragOver(true);
+          break;
+        case "dragleave":
+          setIsDragOver(false);
+          break;
+      }
+    },
+    [validateAndProcess],
+  );
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-  };
-
-  const handleRemove = (id: string) => {
+  const handleRemove = useCallback((id: string) => {
     setFiles(prev => {
       const file = prev.find(f => f.id === id);
       if (file?.thumbnailUrl) URL.revokeObjectURL(file.thumbnailUrl);
       return prev.filter(f => f.id !== id);
     });
-  };
+  }, []);
 
-  const handleRetry = (uploadFile: UploadFile) => {
-    setFiles(prev => prev.map(f => 
-      f.id === uploadFile.id 
-        ? { ...f, status: "uploading", progress: 0, error: undefined } 
+  const handleRetry = useCallback((uploadFile: UploadFile) => {
+    setFiles(prev => prev.map(f =>
+      f.id === uploadFile.id
+        ? { ...f, status: "uploading", progress: 0, error: undefined }
         : f
     ));
     void uploadSingleFile(uploadFile);
-  };
+  }, [uploadSingleFile]);
 
   return (
     <div className="space-y-3">
@@ -294,10 +297,10 @@ export function MediaUpload({ onUpload, label = "Attach Media" }: MediaUploadPro
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
         }}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
+        onDrop={handleDragEvent}
+        onDragOver={handleDragEvent}
+        onDragEnter={handleDragEvent}
+        onDragLeave={handleDragEvent}
         className={`relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed cursor-pointer transition-all overflow-hidden ${
           isDragOver
             ? "border-emerald-500 bg-emerald-500/5"
@@ -342,11 +345,7 @@ export function MediaUpload({ onUpload, label = "Attach Media" }: MediaUploadPro
         </div>
         
         <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
-          {[
-            { icon: ImageIcon, label: "Images", limit: "10MB" },
-            { icon: FileVideo, label: "Videos", limit: "50MB" },
-            { icon: FileText, label: "Docs", limit: "20MB" },
-          ].map(({ icon: Icon, label, limit }) => (
+          {FILE_TYPE_HINTS.map(({ icon: Icon, label, limit }) => (
             <div key={label} className="flex items-center gap-1 px-2 py-1 bg-zinc-800/50 rounded-lg">
               <Icon className="w-3 h-3 text-zinc-500" />
               <span className="text-[10px] text-zinc-500">{label} {limit}</span>

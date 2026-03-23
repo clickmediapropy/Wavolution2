@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { MessageSquare, CheckCircle2, XCircle, Clock, RotateCcw, ChevronRight } from "lucide-react";
@@ -5,29 +6,34 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { relativeTime } from "@/lib/relativeTime";
 
-const statusIcons = {
-  sent: { icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-500/10", label: "Delivered" },
-  failed: { icon: XCircle, color: "text-red-400", bg: "bg-red-500/10", label: "Failed" },
-  pending: { icon: Clock, color: "text-amber-400", bg: "bg-amber-500/10", label: "Pending" },
+type MessageStatus = "sent" | "failed" | "pending";
+
+const STATUS_CONFIG: Record<MessageStatus, { icon: typeof CheckCircle2; color: string; bg: string }> = {
+  sent: { icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+  failed: { icon: XCircle, color: "text-red-400", bg: "bg-red-500/10" },
+  pending: { icon: Clock, color: "text-amber-400", bg: "bg-amber-500/10" },
 };
 
-function MessageItem({ msg, contactName }: { msg: any; contactName?: string }) {
-  const status = msg.status as keyof typeof statusIcons;
-  const statusConfig = statusIcons[status] || statusIcons.pending;
-  const StatusIcon = statusConfig.icon;
-  
+interface MessageItemProps {
+  msg: { _id: string; status: string; phone: string; message: string; _creationTime: number };
+  contactName?: string;
+}
+
+function MessageItem({ msg, contactName }: MessageItemProps): ReactNode {
+  const status = msg.status as MessageStatus;
+  const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
+  const StatusIcon = config.icon;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="group flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-zinc-800/50 transition-colors cursor-pointer"
     >
-      {/* Status indicator */}
-      <div className={`w-8 h-8 rounded-lg ${statusConfig.bg} flex items-center justify-center flex-shrink-0`}>
-        <StatusIcon className={`w-4 h-4 ${statusConfig.color}`} />
+      <div className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center flex-shrink-0`}>
+        <StatusIcon className={`w-4 h-4 ${config.color}`} />
       </div>
-      
-      {/* Contact info */}
+
       <div className="flex-1 min-w-0">
         <span className="text-sm text-zinc-200 font-medium block truncate">
           {contactName ?? msg.phone}
@@ -38,24 +44,20 @@ function MessageItem({ msg, contactName }: { msg: any; contactName?: string }) {
           </span>
         )}
       </div>
-      
-      {/* Message preview */}
+
       <div className="hidden sm:block flex-[2] min-w-0">
         <p className="text-sm text-zinc-400 truncate max-w-[200px]">
           {msg.message}
         </p>
       </div>
-      
-      {/* Timestamp */}
+
       <div className="flex items-center gap-2 flex-shrink-0">
         <span className="text-xs text-zinc-500">
           {relativeTime(msg._creationTime)}
         </span>
-        
-        {/* Hover actions */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {status === "failed" && (
-            <button 
+            <button
               className="p-1.5 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
               title="Retry"
             >
@@ -69,7 +71,17 @@ function MessageItem({ msg, contactName }: { msg: any; contactName?: string }) {
   );
 }
 
-export function RecentMessages() {
+function buildPhoneToNameMap(contacts: { page: Array<{ phone: string; firstName?: string; lastName?: string }> } | undefined): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!contacts?.page) return map;
+  for (const c of contacts.page) {
+    const fullName = [c.firstName, c.lastName].filter(Boolean).join(" ");
+    if (fullName) map.set(c.phone, fullName);
+  }
+  return map;
+}
+
+export function RecentMessages(): ReactNode {
   const messages = usePaginatedQuery(
     api.messages.list,
     {},
@@ -79,14 +91,10 @@ export function RecentMessages() {
   const contacts = useQuery(api.contacts.list, {
     paginationOpts: { numItems: 500, cursor: null },
   });
-  
-  const phoneToName = new Map<string, string>();
-  if (contacts?.page) {
-    for (const c of contacts.page) {
-      const fullName = [c.firstName, c.lastName].filter(Boolean).join(" ");
-      if (fullName) phoneToName.set(c.phone, fullName);
-    }
-  }
+
+  const phoneToName = buildPhoneToNameMap(contacts);
+  const { results } = messages;
+  const deliveredCount = results.filter((m) => m.status === "sent").length;
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
@@ -100,21 +108,20 @@ export function RecentMessages() {
             <p className="text-small text-zinc-500">Last 5 messages sent</p>
           </div>
         </div>
-        
-        {/* Stats summary */}
-        {messages.results.length > 0 && (
+
+        {results.length > 0 && (
           <div className="hidden sm:flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-xs">
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
               <span className="text-zinc-400">
-                {messages.results.filter(m => m.status === "sent").length} delivered
+                {deliveredCount} delivered
               </span>
             </div>
           </div>
         )}
       </div>
 
-      {messages.results.length === 0 ? (
+      {results.length === 0 ? (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-zinc-800/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <MessageSquare className="w-8 h-8 text-zinc-600" />
@@ -133,11 +140,11 @@ export function RecentMessages() {
         <>
           <div className="space-y-1">
             <AnimatePresence>
-              {messages.results.map((msg) => (
-                <MessageItem 
-                  key={msg._id} 
-                  msg={msg} 
-                  contactName={phoneToName.get(msg.phone)} 
+              {results.map((msg) => (
+                <MessageItem
+                  key={msg._id}
+                  msg={msg}
+                  contactName={phoneToName.get(msg.phone)}
                 />
               ))}
             </AnimatePresence>
@@ -145,7 +152,7 @@ export function RecentMessages() {
 
           <div className="pt-4 mt-4 border-t border-zinc-800 flex items-center justify-between">
             <p className="text-xs text-zinc-500">
-              Showing last {messages.results.length} messages
+              Showing last {results.length} messages
             </p>
             <Link
               to="/campaigns/new"

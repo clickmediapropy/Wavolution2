@@ -4,14 +4,11 @@ import {
   MessageSquare,
   Send,
   Users,
-  Megaphone,
   ArrowRight,
-  Zap,
+  CheckCircle2,
   Sparkles,
   BarChart3,
   Shield,
-  Clock,
-  CheckCircle2,
   Play,
   Upload,
   Globe,
@@ -211,6 +208,23 @@ const STATS = [
 /*  Animation helpers                                                  */
 /* ------------------------------------------------------------------ */
 
+const GRID_BACKGROUND_STYLE: React.CSSProperties = {
+  backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                   linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
+  backgroundSize: "60px 60px",
+};
+
+function statusColorClass(status: string): string {
+  switch (status) {
+    case "Read":
+      return "bg-emerald-500/20 text-emerald-400";
+    case "Delivered":
+      return "bg-blue-500/20 text-blue-400";
+    default:
+      return "bg-zinc-700 text-zinc-400";
+  }
+}
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -293,11 +307,7 @@ function AnimatedBackground() {
       />
       <div
         className="absolute inset-0 opacity-[0.02]"
-        style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                           linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-          backgroundSize: "60px 60px",
-        }}
+        style={GRID_BACKGROUND_STYLE}
       />
     </div>
   );
@@ -378,13 +388,7 @@ function DashboardMockup() {
             <div className="flex-1 text-xs text-zinc-500">{row.phone}</div>
             <div className="flex-1">
               <span
-                className={`text-xs px-2 py-0.5 rounded-full ${
-                  row.status === "Read"
-                    ? "bg-emerald-500/20 text-emerald-400"
-                    : row.status === "Delivered"
-                      ? "bg-blue-500/20 text-blue-400"
-                      : "bg-zinc-700 text-zinc-400"
-                }`}
+                className={`text-xs px-2 py-0.5 rounded-full ${statusColorClass(row.status)}`}
               >
                 {row.status}
               </span>
@@ -427,6 +431,39 @@ function SectionHeading({
   );
 }
 
+const FEATURE_COLOR_MAP: Record<string, { icon: string; bg: string; border: string }> = {
+  emerald: {
+    icon: "text-emerald-400",
+    bg: "bg-emerald-500/10",
+    border: "group-hover:border-emerald-500/30",
+  },
+  blue: {
+    icon: "text-blue-400",
+    bg: "bg-blue-500/10",
+    border: "group-hover:border-blue-500/30",
+  },
+  violet: {
+    icon: "text-violet-400",
+    bg: "bg-violet-500/10",
+    border: "group-hover:border-violet-500/30",
+  },
+  amber: {
+    icon: "text-amber-400",
+    bg: "bg-amber-500/10",
+    border: "group-hover:border-amber-500/30",
+  },
+  rose: {
+    icon: "text-rose-400",
+    bg: "bg-rose-500/10",
+    border: "group-hover:border-rose-500/30",
+  },
+  cyan: {
+    icon: "text-cyan-400",
+    bg: "bg-cyan-500/10",
+    border: "group-hover:border-cyan-500/30",
+  },
+};
+
 function FeatureCard({
   feature,
   index,
@@ -435,40 +472,7 @@ function FeatureCard({
   index: number;
 }) {
   const Icon = feature.icon;
-  const colorMap: Record<string, { icon: string; bg: string; border: string }> =
-    {
-      emerald: {
-        icon: "text-emerald-400",
-        bg: "bg-emerald-500/10",
-        border: "group-hover:border-emerald-500/30",
-      },
-      blue: {
-        icon: "text-blue-400",
-        bg: "bg-blue-500/10",
-        border: "group-hover:border-blue-500/30",
-      },
-      violet: {
-        icon: "text-violet-400",
-        bg: "bg-violet-500/10",
-        border: "group-hover:border-violet-500/30",
-      },
-      amber: {
-        icon: "text-amber-400",
-        bg: "bg-amber-500/10",
-        border: "group-hover:border-amber-500/30",
-      },
-      rose: {
-        icon: "text-rose-400",
-        bg: "bg-rose-500/10",
-        border: "group-hover:border-rose-500/30",
-      },
-      cyan: {
-        icon: "text-cyan-400",
-        bg: "bg-cyan-500/10",
-        border: "group-hover:border-cyan-500/30",
-      },
-    };
-  const c = colorMap[feature.color] ?? colorMap.emerald!;
+  const c = FEATURE_COLOR_MAP[feature.color] ?? FEATURE_COLOR_MAP.emerald!;
 
   return (
     <FadeInWhenVisible delay={index * 0.08}>

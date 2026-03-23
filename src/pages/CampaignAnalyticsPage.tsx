@@ -5,16 +5,9 @@ import { BarChart3, Loader2, Megaphone, MessageSquare, TrendingUp, CalendarDays 
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { staggerContainerVariants, staggerItemVariants } from "@/lib/transitions";
+import { CAMPAIGN_STATUS_STYLES } from "@/lib/types";
 
-const statusStyles: Record<string, string> = {
-  draft: "bg-zinc-700 text-zinc-300",
-  running: "bg-emerald-500/10 text-emerald-400",
-  paused: "bg-amber-500/10 text-amber-400",
-  completed: "bg-blue-500/10 text-blue-400",
-  stopped: "bg-red-500/10 text-red-400",
-};
-
-const PIE_COLORS = ["#10b981", "#ef4444", "#6b7280"]; // sent, failed, pending
+const PIE_COLORS = ["#10b981", "#ef4444", "#6b7280"];
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString("en-US", {
@@ -24,11 +17,16 @@ function formatDate(ts: number): string {
   });
 }
 
+function getDeliveryRateColor(rate: number): string {
+  if (rate >= 90) return "text-emerald-400";
+  if (rate >= 70) return "text-amber-400";
+  return "text-red-400";
+}
+
 export function CampaignAnalyticsPage() {
   const campaigns = useQuery(api.campaigns.listByUser);
   const dashboardStats = useQuery(api.messages.dashboardStats);
 
-  // Date range filter
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
 
@@ -48,7 +46,6 @@ export function CampaignAnalyticsPage() {
     return list;
   }, [campaigns, rangeStart, rangeEnd]);
 
-  // Aggregated stats
   const totalCampaigns = filteredCampaigns.length;
   const totalSent = filteredCampaigns.reduce((sum, c) => sum + c.sent, 0);
   const totalFailed = filteredCampaigns.reduce((sum, c) => sum + c.failed, 0);
@@ -56,7 +53,6 @@ export function CampaignAnalyticsPage() {
   const overallDeliveryRate =
     totalProcessed > 0 ? Math.round((totalSent / totalProcessed) * 1000) / 10 : 0;
 
-  // Pie chart data
   const totalPending = filteredCampaigns.reduce(
     (sum, c) => sum + Math.max(0, c.total - c.processed),
     0,
@@ -82,7 +78,6 @@ export function CampaignAnalyticsPage() {
       animate="animate"
       className="space-y-6 max-w-5xl mx-auto"
     >
-      {/* Header */}
       <motion.div variants={staggerItemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-emerald-500/10 rounded-xl">
@@ -97,7 +92,6 @@ export function CampaignAnalyticsPage() {
         </div>
       </motion.div>
 
-      {/* Date Range Filter */}
       <motion.div
         variants={staggerItemVariants}
         className="flex flex-wrap items-center gap-3 p-4 bg-zinc-900 border border-zinc-800 rounded-xl"
@@ -130,7 +124,6 @@ export function CampaignAnalyticsPage() {
         )}
       </motion.div>
 
-      {/* Summary Cards */}
       <motion.div variants={staggerItemVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
           icon={<Megaphone className="w-5 h-5 text-emerald-500" />}
@@ -155,9 +148,7 @@ export function CampaignAnalyticsPage() {
         />
       </motion.div>
 
-      {/* Pie Chart + Stats */}
       <motion.div variants={staggerItemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Delivery Rate Pie */}
         <div className="p-6 bg-zinc-900 border border-zinc-800 rounded-xl">
           <h2 className="text-sm font-medium text-zinc-400 mb-4">Delivery Breakdown</h2>
           {pieData.length === 0 ? (
@@ -191,13 +182,8 @@ export function CampaignAnalyticsPage() {
               </PieChart>
             </ResponsiveContainer>
           )}
-          {/* Legend */}
           <div className="flex justify-center gap-6 mt-2">
-            {[
-              { label: "Sent", color: "#10b981" },
-              { label: "Failed", color: "#ef4444" },
-              { label: "Pending", color: "#6b7280" },
-            ].map((item) => (
+            {PIE_LEGEND.map((item) => (
               <div key={item.label} className="flex items-center gap-2 text-xs text-zinc-400">
                 <span
                   className="w-2.5 h-2.5 rounded-full inline-block"
@@ -209,7 +195,6 @@ export function CampaignAnalyticsPage() {
           </div>
         </div>
 
-        {/* Global Message Stats */}
         <div className="p-6 bg-zinc-900 border border-zinc-800 rounded-xl">
           <h2 className="text-sm font-medium text-zinc-400 mb-4">Global Message Stats</h2>
           <div className="space-y-4">
@@ -225,7 +210,6 @@ export function CampaignAnalyticsPage() {
         </div>
       </motion.div>
 
-      {/* Per-Campaign Table */}
       <motion.div
         variants={staggerItemVariants}
         className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden"
@@ -270,7 +254,7 @@ export function CampaignAnalyticsPage() {
                       <td className="px-6 py-3">
                         <span
                           className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full capitalize ${
-                            statusStyles[campaign.status] ?? "bg-zinc-700 text-zinc-300"
+                            CAMPAIGN_STATUS_STYLES[campaign.status] ?? "bg-zinc-700 text-zinc-300"
                           }`}
                         >
                           {campaign.status}
@@ -283,15 +267,7 @@ export function CampaignAnalyticsPage() {
                         {campaign.failed}
                       </td>
                       <td className="px-6 py-3 text-right tabular-nums">
-                        <span
-                          className={
-                            rate >= 90
-                              ? "text-emerald-400"
-                              : rate >= 70
-                                ? "text-amber-400"
-                                : "text-red-400"
-                          }
-                        >
+                        <span className={getDeliveryRateColor(rate)}>
                           {processed > 0 ? `${rate}%` : "--"}
                         </span>
                       </td>
@@ -310,6 +286,12 @@ export function CampaignAnalyticsPage() {
   );
 }
 
+const PIE_LEGEND = [
+  { label: "Sent", color: "#10b981" },
+  { label: "Failed", color: "#ef4444" },
+  { label: "Pending", color: "#6b7280" },
+];
+
 function SummaryCard({
   icon,
   label,
@@ -320,7 +302,7 @@ function SummaryCard({
   label: string;
   value: string | number;
   subtitle?: string;
-}) {
+}): React.ReactElement {
   return (
     <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
       <div className="flex items-center gap-2 mb-2">
@@ -333,7 +315,7 @@ function SummaryCard({
   );
 }
 
-function StatRow({ label, value }: { label: string; value: string | number }) {
+function StatRow({ label, value }: { label: string; value: string | number }): React.ReactElement {
   return (
     <div className="flex items-center justify-between">
       <span className="text-sm text-zinc-400">{label}</span>

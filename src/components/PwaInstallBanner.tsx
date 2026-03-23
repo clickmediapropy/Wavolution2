@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
 import { Download, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,14 +8,15 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-export function PwaInstallBanner() {
+const DISMISSED_KEY = "pwa-install-dismissed";
+
+export function PwaInstallBanner(): ReactNode {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    // Don't show if user previously dismissed
-    if (localStorage.getItem("pwa-install-dismissed") === "true") {
+    if (localStorage.getItem(DISMISSED_KEY) === "true") {
       setDismissed(true);
       return;
     }
@@ -40,7 +42,7 @@ export function PwaInstallBanner() {
   const handleDismiss = () => {
     setDismissed(true);
     setDeferredPrompt(null);
-    localStorage.setItem("pwa-install-dismissed", "true");
+    localStorage.setItem(DISMISSED_KEY, "true");
   };
 
   const show = deferredPrompt !== null && !dismissed;

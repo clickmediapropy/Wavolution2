@@ -1,10 +1,10 @@
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Loader2 } from "lucide-react";
 
-export function WhatsAppGuard({ children }: { children: ReactNode }) {
+export function WhatsAppGuard({ children }: { children: ReactNode }): ReactNode {
   const instances = useQuery(api.instances.listConnected);
 
   if (instances === undefined) {

@@ -137,7 +137,6 @@ function StageColumn({
         isDragOver && "border-emerald-500/50 bg-emerald-500/5",
       )}
     >
-      {/* Column header */}
       <div className="flex items-center justify-between p-3 border-b border-zinc-800">
         <div className="flex items-center gap-2">
           <div
@@ -159,7 +158,6 @@ function StageColumn({
         )}
       </div>
 
-      {/* Cards */}
       <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-hide">
         {contacts.map((contact) => (
           <ContactCard
@@ -268,18 +266,7 @@ export function PipelinePage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
-  // Group contacts by stage
-  const contactsByStageMap = new Map<string, typeof groupedContacts>();
-
-  type ContactItem = {
-    _id: Id<"contacts">;
-    phone: string;
-    firstName?: string;
-    lastName?: string;
-    tags?: string[];
-    engagementScore?: number;
-    pipelineStageId?: Id<"pipelineStages">;
-  };
+  const contactsByStageMap = new Map<string, ContactItem[]>();
 
   const groupedContacts: ContactItem[] = (allContacts ?? []).map((c) => ({
     _id: c._id,
@@ -291,7 +278,6 @@ export function PipelinePage() {
     pipelineStageId: c.pipelineStageId,
   }));
 
-  // Build map
   if (stages) {
     for (const stage of stages) {
       contactsByStageMap.set(
@@ -383,7 +369,6 @@ export function PipelinePage() {
     );
   }
 
-  // Empty state
   if (stages.length === 0) {
     return (
       <motion.div
@@ -443,7 +428,6 @@ export function PipelinePage() {
       animate="animate"
       className="space-y-4 p-4 md:p-6"
     >
-      {/* Header */}
       <motion.div
         variants={staggerItemVariants}
         className="flex items-center justify-between"
@@ -468,12 +452,10 @@ export function PipelinePage() {
         </button>
       </motion.div>
 
-      {/* Kanban board */}
       <motion.div
         variants={staggerItemVariants}
         className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide"
       >
-        {/* Unassigned column */}
         <StageColumn
           stageId="unassigned"
           stageName="Unassigned"
@@ -485,7 +467,6 @@ export function PipelinePage() {
           isDragOver={dragOverStage === "unassigned"}
         />
 
-        {/* Stage columns */}
         {stages.map((stage) => (
           <StageColumn
             key={stage._id}

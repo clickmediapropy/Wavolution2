@@ -48,7 +48,6 @@ function InstanceCard({
     }
   }, [instance.whatsappConnected, fetchQr]);
 
-  // Poll connection status when not connected
   useEffect(() => {
     if (instance.whatsappConnected) return;
     const interval = setInterval(async () => {
@@ -61,7 +60,7 @@ function InstanceCard({
           toast.success(`${instance.name} connected!`);
         }
       } catch {
-        // Silently ignore polling errors
+        // Polling errors are expected when instance is connecting
       }
     }, 5000);
     return () => clearInterval(interval);
@@ -69,7 +68,6 @@ function InstanceCard({
 
   return (
     <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           {instance.whatsappConnected ? (
@@ -111,7 +109,6 @@ function InstanceCard({
         </div>
       </div>
 
-      {/* QR code for unconnected instances */}
       {!instance.whatsappConnected && (
         <div>
           <div className="w-48 h-48 mx-auto mb-3 bg-white rounded-lg p-3 flex items-center justify-center">
@@ -153,7 +150,6 @@ function InstanceCard({
         </div>
       )}
 
-      {/* Connected instance details */}
       {instance.whatsappConnected && (
         <div className="flex items-center gap-2 text-sm text-zinc-400">
           <Wifi className="w-4 h-4 text-emerald-500" />
@@ -174,7 +170,6 @@ export function WhatsAppPage() {
   const [customName, setCustomName] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  // Handle create instance
   const handleCreate = async () => {
     if (!user) return;
     setIsCreating(true);
@@ -195,7 +190,6 @@ export function WhatsAppPage() {
     }
   };
 
-  // Handle delete instance
   const handleDelete = async (instance: Doc<"instances">) => {
     try {
       await deleteInstanceAction({
@@ -244,7 +238,6 @@ export function WhatsAppPage() {
         </button>
       </div>
 
-      {/* Create form */}
       {showCreateForm && (
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 mb-6">
           <h3 className="text-sm font-medium text-zinc-300 mb-3">
@@ -288,7 +281,6 @@ export function WhatsAppPage() {
         </div>
       )}
 
-      {/* Instance grid */}
       {instances.length === 0 ? (
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-12 text-center">
           <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 
@@ -15,7 +16,7 @@ export function DeleteConfirmDialog({
   onConfirm,
   onCancel,
   isDeleting,
-}: DeleteConfirmDialogProps) {
+}: DeleteConfirmDialogProps): ReactNode {
   const [confirmText, setConfirmText] = useState("");
   const requiresTyping = count > 5;
   const canConfirm = !requiresTyping || confirmText === "DELETE";

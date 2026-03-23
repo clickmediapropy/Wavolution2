@@ -2,14 +2,7 @@ import { useQuery } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { api } from "@convex/_generated/api";
 import { Megaphone, Plus, Clock, Loader2 } from "lucide-react";
-
-const statusStyles: Record<string, string> = {
-  draft: "bg-zinc-700 text-zinc-300",
-  running: "bg-emerald-500/10 text-emerald-400",
-  paused: "bg-amber-500/10 text-amber-400",
-  completed: "bg-blue-500/10 text-blue-400",
-  stopped: "bg-red-500/10 text-red-400",
-};
+import { CAMPAIGN_STATUS_STYLES } from "@/lib/types";
 
 export function CampaignHistoryPage() {
   const navigate = useNavigate();
@@ -25,7 +18,6 @@ export function CampaignHistoryPage() {
 
   return (
     <div className="animate-fadeIn max-w-3xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Megaphone className="w-7 h-7 text-emerald-500" />
@@ -40,7 +32,6 @@ export function CampaignHistoryPage() {
         </button>
       </div>
 
-      {/* Campaign list */}
       {campaigns.length === 0 ? (
         <div className="text-center py-20">
           <Megaphone className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
@@ -71,10 +62,9 @@ export function CampaignHistoryPage() {
                   {campaign.name}
                 </h3>
                 <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[campaign.status] ?? statusStyles.draft}`}
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${CAMPAIGN_STATUS_STYLES[campaign.status] ?? CAMPAIGN_STATUS_STYLES.draft}`}
                 >
-                  {campaign.status.charAt(0).toUpperCase() +
-                    campaign.status.slice(1)}
+                  {campaign.status}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-xs text-zinc-500">

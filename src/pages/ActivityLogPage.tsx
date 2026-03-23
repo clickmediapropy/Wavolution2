@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { motion } from "framer-motion";
@@ -107,19 +108,20 @@ function formatTypeLabel(type: string): string {
 export function ActivityLogPage() {
   const activities = useQuery(api.activityLog.listRecent, { limit: 100 });
 
-  // Group activities by date
-  const grouped: { label: string; items: NonNullable<typeof activities> }[] = [];
-  if (activities) {
+  const grouped = useMemo(() => {
+    if (!activities) return [];
+    const groups: { label: string; items: NonNullable<typeof activities> }[] = [];
     let currentLabel = "";
     for (const activity of activities) {
       const label = getDateLabel(activity._creationTime);
       if (label !== currentLabel) {
         currentLabel = label;
-        grouped.push({ label, items: [] });
+        groups.push({ label, items: [] });
       }
-      grouped[grouped.length - 1].items.push(activity);
+      groups[groups.length - 1]!.items.push(activity);
     }
-  }
+    return groups;
+  }, [activities]);
 
   return (
     <motion.div

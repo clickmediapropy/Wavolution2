@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { staggerContainerVariants, staggerItemVariants } from "@/lib/transitions";
-import type { Doc } from "@convex/_generated/dataModel";
+import type { Doc, Id } from "@convex/_generated/dataModel";
 
 function KnowledgeBaseSection() {
   const entries = useQuery(api.knowledgeBase.list);
@@ -56,7 +56,7 @@ function KnowledgeBaseSection() {
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
-      await removeEntry({ id: id as any });
+      await removeEntry({ id: id as Id<"knowledgeBaseEntries"> });
       toast.success("Entry deleted");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete entry");
@@ -158,7 +158,7 @@ function KnowledgeBaseSection() {
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-zinc-200 truncate">{entry.title}</p>
                 <p className="text-[11px] text-zinc-500">
-                  {entry.wordCount.toLocaleString()} {entry.wordCount === 1 ? "word" : "words"}
+                  {(entry.wordCount ?? 0).toLocaleString()} {entry.wordCount === 1 ? "word" : "words"}
                 </p>
               </div>
               <button
@@ -423,9 +423,9 @@ function BotSettingsCard({ instance }: { instance: Doc<"instances"> }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState(instance.botSystemPrompt ?? "");
-  const [temperature, setTemperature] = useState(0.7);
-  const [welcomeMessage, setWelcomeMessage] = useState("");
-  const [fallbackMessage, setFallbackMessage] = useState("");
+  const [temperature, setTemperature] = useState(instance.temperature ?? 0.7);
+  const [welcomeMessage, setWelcomeMessage] = useState(instance.welcomeMessage ?? "");
+  const [fallbackMessage, setFallbackMessage] = useState(instance.fallbackMessage ?? "");
 
   const handleToggleBot = async () => {
     try {
@@ -447,6 +447,9 @@ function BotSettingsCard({ instance }: { instance: Doc<"instances"> }) {
       await updateBotSettings({
         id: instance._id,
         botSystemPrompt: systemPrompt,
+        temperature,
+        welcomeMessage,
+        fallbackMessage,
       });
       toast.success("Bot settings saved");
       setIsEditing(false);

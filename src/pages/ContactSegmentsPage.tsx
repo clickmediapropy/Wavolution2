@@ -14,6 +14,9 @@ import {
 import { motion } from "framer-motion";
 import { staggerContainerVariants, staggerItemVariants } from "@/lib/transitions";
 
+type SegmentCounts = { total: number; replied: number; engaged: number; pending: number; sent: number; failed: number; tagged: number; noWhatsApp: number };
+type SegmentCountKey = keyof SegmentCounts;
+
 interface Segment {
   key: string;
   label: string;
@@ -21,12 +24,8 @@ interface Segment {
   icon: React.ReactNode;
   iconBg: string;
   borderColor: string;
-  countKey: keyof NonNullable<ReturnType<typeof useSegmentCounts>>;
+  countKey: SegmentCountKey;
   filter: string;
-}
-
-function useSegmentCounts() {
-  return useQuery(api.contacts.segmentCounts);
 }
 
 const segments: Segment[] = [
@@ -142,7 +141,7 @@ export function ContactSegmentsPage() {
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
       >
         {segments.map((segment) => {
-          const count = counts?.[segment.countKey];
+          const count = counts?.[segment.countKey as keyof typeof counts];
           const isLoading = counts === undefined;
 
           return (

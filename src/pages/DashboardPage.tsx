@@ -9,6 +9,8 @@ import { QuickActions } from "@/components/QuickActions";
 import { OnboardingProgress } from "@/components/OnboardingProgress";
 import { staggerContainerVariants, staggerItemVariants } from "@/lib/transitions";
 
+const EMPTY_SPARKLINE: number[] = [0, 0, 0, 0, 0, 0, 0];
+
 function formatResponseTime(minutes: number | null): string {
   if (minutes === null) return "—";
   if (minutes < 60) return `${minutes}m`;
@@ -18,7 +20,7 @@ function formatResponseTime(minutes: number | null): string {
   return `${hours}h ${remaining}m`;
 }
 
-export function DashboardPage() {
+export function DashboardPage(): React.ReactElement {
   const contactCount = useQuery(api.contacts.count);
   const contactsThisWeek = useQuery(api.contacts.countThisWeek);
   const messageCount = useQuery(api.messages.count);
@@ -36,10 +38,8 @@ export function DashboardPage() {
   const activeCampaigns = campaigns?.filter(c => c.status === "running" || c.status === "paused").length ?? 0;
   const connected = (instanceCounts?.connected ?? 0) > 0;
 
-  // Real sparkline data
-  const contactSparkline = contactDailyCounts ?? [0, 0, 0, 0, 0, 0, 0];
-  const messageSparkline = messageDailyCounts ?? [0, 0, 0, 0, 0, 0, 0];
-  // Campaign sparkline: use daily message counts scaled down as a proxy
+  const contactSparkline = contactDailyCounts ?? EMPTY_SPARKLINE;
+  const messageSparkline = messageDailyCounts ?? EMPTY_SPARKLINE;
   const campaignSparkline = messageSparkline.map((v) => Math.round(v / 10));
 
   const hasNewContacts = contactsThisWeek !== undefined && contactCount !== undefined && contactsThisWeek > 0;

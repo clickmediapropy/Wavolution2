@@ -1,13 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Id } from "@convex/_generated/dataModel";
-import { Download, FileSpreadsheet, MessageSquare, Megaphone, Loader2 } from "lucide-react";
+import { Download, FileSpreadsheet, MessageSquare, Megaphone } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { staggerContainerVariants, staggerItemVariants } from "@/lib/transitions";
+import type { Id } from "@convex/_generated/dataModel";
 
-function downloadCsv(csv: string, filename: string) {
+function downloadCsv(csv: string, filename: string): void {
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -17,6 +17,20 @@ function downloadCsv(csv: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function todayStamp(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+interface ExportSectionProps {
+  icon: React.ElementType;
+  iconColor: string;
+  title: string;
+  description: string;
+  count: number | undefined;
+  onExport: () => void;
+  disabled: boolean;
+}
+
 function ExportSection({
   icon: Icon,
   iconColor,
@@ -24,18 +38,8 @@ function ExportSection({
   description,
   count,
   onExport,
-  loading,
   disabled,
-}: {
-  icon: React.ElementType;
-  iconColor: string;
-  title: string;
-  description: string;
-  count: number | undefined;
-  onExport: () => void;
-  loading: boolean;
-  disabled: boolean;
-}) {
+}: ExportSectionProps) {
   return (
     <motion.div
       variants={staggerItemVariants}
@@ -58,14 +62,10 @@ function ExportSection({
         </div>
         <button
           onClick={onExport}
-          disabled={disabled || loading}
+          disabled={disabled}
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
-          {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Download className="w-4 h-4" />
-          )}
+          <Download className="w-4 h-4" />
           Download CSV
         </button>
       </div>
@@ -75,11 +75,7 @@ function ExportSection({
 
 export function ExportPage() {
   const [selectedCampaignId, setSelectedCampaignId] = useState<Id<"campaigns"> | "">("");
-  const [exportingContacts, setExportingContacts] = useState(false);
-  const [exportingMessages, setExportingMessages] = useState(false);
-  const [exportingCampaign, setExportingCampaign] = useState(false);
 
-  // Data queries
   const contactsData = useQuery(api.exports.exportContacts);
   const messagesData = useQuery(api.exports.exportMessages);
   const campaigns = useQuery(api.campaigns.listByUser);
@@ -88,50 +84,38 @@ export function ExportPage() {
     selectedCampaignId ? { campaignId: selectedCampaignId as Id<"campaigns"> } : "skip",
   );
 
-  const handleExportContacts = useCallback(() => {
+  function handleExportContacts(): void {
     if (!contactsData) return;
-    setExportingContacts(true);
     try {
-      const filename = `contacts-${new Date().toISOString().slice(0, 10)}.csv`;
-      downloadCsv(contactsData.csv, filename);
+      downloadCsv(contactsData.csv, `contacts-${todayStamp()}.csv`);
       toast.success(`Exported ${contactsData.count} contacts`);
     } catch {
       toast.error("Failed to export contacts");
-    } finally {
-      setExportingContacts(false);
     }
-  }, [contactsData]);
+  }
 
-  const handleExportMessages = useCallback(() => {
+  function handleExportMessages(): void {
     if (!messagesData) return;
-    setExportingMessages(true);
     try {
-      const filename = `messages-${new Date().toISOString().slice(0, 10)}.csv`;
-      downloadCsv(messagesData.csv, filename);
+      downloadCsv(messagesData.csv, `messages-${todayStamp()}.csv`);
       toast.success(`Exported ${messagesData.count} messages`);
     } catch {
       toast.error("Failed to export messages");
-    } finally {
-      setExportingMessages(false);
     }
-  }, [messagesData]);
+  }
 
-  const handleExportCampaign = useCallback(() => {
+  function handleExportCampaign(): void {
     if (!campaignData) return;
-    setExportingCampaign(true);
     try {
       const safeName = (campaignData.campaignName ?? "campaign")
         .replace(/[^a-zA-Z0-9_-]/g, "_")
         .toLowerCase();
-      const filename = `campaign-${safeName}-${new Date().toISOString().slice(0, 10)}.csv`;
-      downloadCsv(campaignData.csv, filename);
+      downloadCsv(campaignData.csv, `campaign-${safeName}-${todayStamp()}.csv`);
       toast.success(`Exported ${campaignData.count} messages from "${campaignData.campaignName}"`);
     } catch {
       toast.error("Failed to export campaign results");
-    } finally {
-      setExportingCampaign(false);
     }
-  }, [campaignData]);
+  }
 
   return (
     <motion.div
@@ -153,7 +137,6 @@ export function ExportPage() {
         </div>
       </motion.div>
 
-      {/* Export Contacts */}
       <ExportSection
         icon={FileSpreadsheet}
         iconColor="bg-blue-500/10 text-blue-400"
@@ -161,11 +144,9 @@ export function ExportPage() {
         description="Phone, name, tags, status, and engagement score for all contacts."
         count={contactsData?.count}
         onExport={handleExportContacts}
-        loading={exportingContacts}
         disabled={!contactsData || contactsData.count === 0}
       />
 
-      {/* Export Messages */}
       <ExportSection
         icon={MessageSquare}
         iconColor="bg-purple-500/10 text-purple-400"
@@ -173,11 +154,9 @@ export function ExportPage() {
         description="Phone, message text, status, direction, and timestamp for all messages."
         count={messagesData?.count}
         onExport={handleExportMessages}
-        loading={exportingMessages}
         disabled={!messagesData || messagesData.count === 0}
       />
 
-      {/* Export Campaign Results */}
       <motion.div
         variants={staggerItemVariants}
         className="bg-zinc-900 border border-zinc-800 rounded-xl p-6"
@@ -215,14 +194,10 @@ export function ExportPage() {
           </div>
           <button
             onClick={handleExportCampaign}
-            disabled={!selectedCampaignId || !campaignData || campaignData.count === 0 || exportingCampaign}
+            disabled={!selectedCampaignId || !campaignData || campaignData.count === 0}
             className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
           >
-            {exportingCampaign ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
+            <Download className="w-4 h-4" />
             Download CSV
           </button>
         </div>

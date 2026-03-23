@@ -1,8 +1,6 @@
 import { useState, useMemo } from "react";
 import { Search, FileCode2, ChevronDown, ChevronRight } from "lucide-react";
 
-// ---- Data types ----
-
 type FunctionType = "query" | "mutation" | "action" | "internalQuery" | "internalMutation" | "internalAction" | "httpAction";
 
 interface FunctionDoc {
@@ -18,8 +16,6 @@ interface FileGroup {
   description: string;
   functions: FunctionDoc[];
 }
-
-// ---- Static API data extracted from convex/*.ts ----
 
 const API_GROUPS: FileGroup[] = [
   {
@@ -280,7 +276,15 @@ const API_GROUPS: FileGroup[] = [
   },
 ];
 
-// ---- Badge colors by function type ----
+const TYPE_DESCRIPTIONS: Record<FunctionType, string> = {
+  query: "read-only, reactive",
+  mutation: "write, transactional",
+  action: "side effects (HTTP, AI)",
+  internalQuery: "server-only read",
+  internalMutation: "server-only write",
+  internalAction: "server-only side effects",
+  httpAction: "HTTP endpoint",
+};
 
 const TYPE_STYLES: Record<FunctionType, { bg: string; text: string }> = {
   query:            { bg: "bg-emerald-500/15 border-emerald-500/30", text: "text-emerald-400" },
@@ -300,8 +304,6 @@ function TypeBadge({ type }: { type: FunctionType }) {
     </span>
   );
 }
-
-// ---- Component ----
 
 export function APIDocsPage() {
   const [search, setSearch] = useState("");
@@ -348,7 +350,6 @@ export function APIDocsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
-      {/* Header */}
       <div className="space-y-1">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-800 ring-1 ring-zinc-700">
@@ -363,7 +364,6 @@ export function APIDocsPage() {
         </div>
       </div>
 
-      {/* Search + Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
@@ -405,14 +405,12 @@ export function APIDocsPage() {
         </div>
       </div>
 
-      {/* Results count */}
       {(search || typeFilter !== "all") && (
         <p className="text-xs text-zinc-500">
           Showing {visibleFunctions} of {totalFunctions} functions
         </p>
       )}
 
-      {/* Groups */}
       <div className="space-y-3">
         {filteredGroups.map((group) => {
           const isExpanded = expandedGroups.has(group.file);
@@ -421,7 +419,6 @@ export function APIDocsPage() {
               key={group.file}
               className="rounded-xl border border-zinc-800 bg-zinc-900/60"
             >
-              {/* Group header */}
               <button
                 onClick={() => toggleGroup(group.file)}
                 className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-zinc-800/40"
@@ -449,7 +446,6 @@ export function APIDocsPage() {
                 </div>
               </button>
 
-              {/* Functions list */}
               {isExpanded && (
                 <div className="border-t border-zinc-800">
                   <div className="divide-y divide-zinc-800/60">
@@ -488,7 +484,6 @@ export function APIDocsPage() {
         )}
       </div>
 
-      {/* Legend */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-5 py-4">
         <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
           Type Legend
@@ -498,13 +493,7 @@ export function APIDocsPage() {
             <div key={type} className="flex items-center gap-1.5">
               <TypeBadge type={type} />
               <span className="text-xs text-zinc-500">
-                {type === "query" && "- read-only, reactive"}
-                {type === "mutation" && "- write, transactional"}
-                {type === "action" && "- side effects (HTTP, AI)"}
-                {type === "internalQuery" && "- server-only read"}
-                {type === "internalMutation" && "- server-only write"}
-                {type === "internalAction" && "- server-only side effects"}
-                {type === "httpAction" && "- HTTP endpoint"}
+                - {TYPE_DESCRIPTIONS[type]}
               </span>
             </div>
           ))}

@@ -40,6 +40,33 @@ const navItems = [
   { to: "/activity", label: "Activity", icon: Activity },
 ] as const;
 
+const sidebarSpring = { type: "spring", stiffness: 300, damping: 30 } as const;
+
+function LogoIcon() {
+  return (
+    <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg shadow-emerald-500/20">
+      <MessageSquare className="w-4 h-4 text-white" />
+    </div>
+  );
+}
+
+function CollapsibleLabel({ isCollapsed, children }: { isCollapsed: boolean; children: string }) {
+  return (
+    <AnimatePresence>
+      {!isCollapsed && (
+        <motion.span
+          initial={{ opacity: 0, width: 0 }}
+          animate={{ opacity: 1, width: "auto" }}
+          exit={{ opacity: 0, width: 0 }}
+          className="text-sm font-medium whitespace-nowrap overflow-hidden"
+        >
+          {children}
+        </motion.span>
+      )}
+    </AnimatePresence>
+  );
+}
+
 interface SidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
@@ -53,10 +80,9 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     <motion.aside
       initial={false}
       animate={{ width: isCollapsed ? 72 : 240 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      transition={sidebarSpring}
       className="fixed left-0 top-0 h-screen bg-surface-card/95 backdrop-blur-xl border-r border-border-default z-50 flex flex-col hidden md:flex"
     >
-      {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-border-default">
         <Link
           to="/dashboard"
@@ -65,9 +91,7 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             isCollapsed && "justify-center"
           )}
         >
-          <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg shadow-emerald-500/20">
-            <MessageSquare className="w-4 h-4 text-white" />
-          </div>
+          <LogoIcon />
           <AnimatePresence>
             {!isCollapsed && (
               <motion.span
@@ -83,7 +107,6 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         </Link>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-hide">
         {navItems.map(({ to, label, icon: Icon }) => {
           const isActive = location.pathname === to || location.pathname.startsWith(`${to}/`);
@@ -99,32 +122,19 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               )}
             >
               <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "animate-pulse-dot")} />
-              <AnimatePresence>
-                {!isCollapsed && (
-                  <motion.span
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: "auto" }}
-                    exit={{ opacity: 0, width: 0 }}
-                    className="text-sm font-medium whitespace-nowrap overflow-hidden"
-                  >
-                    {label}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-              
-              {/* Tooltip for collapsed state */}
+              <CollapsibleLabel isCollapsed={isCollapsed}>{label}</CollapsibleLabel>
+
               {isCollapsed && (
                 <div className="absolute left-full ml-2 px-2 py-1 bg-surface-elevated text-text-primary text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
                   {label}
                 </div>
               )}
 
-              {/* Active indicator */}
               {isActive && (
                 <motion.div
                   layoutId="activeIndicator"
                   className="absolute left-0 w-0.5 h-6 bg-emerald-500 rounded-full"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  transition={sidebarSpring}
                 />
               )}
             </NavLink>
@@ -132,7 +142,6 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         })}
       </nav>
 
-      {/* Bottom section */}
       <div className="p-3 border-t border-border-default space-y-1">
         <NavLink
           to="/settings"
@@ -145,18 +154,7 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           )}
         >
           <Settings className="w-5 h-5 flex-shrink-0" />
-          <AnimatePresence>
-            {!isCollapsed && (
-              <motion.span
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: "auto" }}
-                exit={{ opacity: 0, width: 0 }}
-                className="text-sm font-medium whitespace-nowrap overflow-hidden"
-              >
-                Settings
-              </motion.span>
-            )}
-          </AnimatePresence>
+          <CollapsibleLabel isCollapsed={isCollapsed}>Settings</CollapsibleLabel>
         </NavLink>
 
         <ThemeToggle isCollapsed={isCollapsed} />
@@ -169,21 +167,9 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           )}
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
-          <AnimatePresence>
-            {!isCollapsed && (
-              <motion.span
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: "auto" }}
-                exit={{ opacity: 0, width: 0 }}
-                className="text-sm font-medium whitespace-nowrap overflow-hidden"
-              >
-                Logout
-              </motion.span>
-            )}
-          </AnimatePresence>
+          <CollapsibleLabel isCollapsed={isCollapsed}>Logout</CollapsibleLabel>
         </button>
 
-        {/* Collapse toggle */}
         <button
           onClick={onToggle}
           className={cn(
@@ -205,8 +191,12 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   );
 }
 
-// Mobile navigation
-function MobileNav({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+interface MobileNavProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+function MobileNav({ isOpen, onClose }: MobileNavProps) {
   const { signOut } = useAuthActions();
   const location = useLocation();
 
@@ -331,18 +321,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
       : {},
   );
 
-  // Load sidebar state from localStorage
   useEffect(() => {
     const saved = localStorage.getItem("sidebarCollapsed");
     if (saved) setSidebarCollapsed(saved === "true");
   }, []);
 
-  // Save sidebar state
-  const toggleSidebar = () => {
-    const newState = !sidebarCollapsed;
-    setSidebarCollapsed(newState);
-    localStorage.setItem("sidebarCollapsed", String(newState));
-  };
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("sidebarCollapsed", String(next));
+      return next;
+    });
+  }, []);
+
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
   return (
     <div className="min-h-screen bg-surface-base">
@@ -365,9 +357,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <header className="md:hidden sticky top-0 z-40 bg-surface-card/95 backdrop-blur-xl border-b border-border-default">
             <div className="flex items-center justify-between h-14 px-4">
               <Link to="/dashboard" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
-                  <MessageSquare className="w-4 h-4 text-white" />
-                </div>
+                <LogoIcon />
                 <span className="font-bold text-text-primary">Message Hub</span>
               </Link>
               <button
@@ -389,9 +379,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   to="/"
                   className="flex items-center gap-3 text-xl font-bold text-text-primary hover:text-emerald-400 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                    <MessageSquare className="w-4 h-4 text-white" />
-                  </div>
+                  <LogoIcon />
                   <span>Message Hub</span>
                 </Link>
                 
@@ -424,7 +412,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      <MobileNav isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+      <MobileNav isOpen={mobileMenuOpen} onClose={closeMobileMenu} />
       {isAuthenticated && (
         <CommandPalette isOpen={commandPaletteOpen} onClose={closeCommandPalette} />
       )}

@@ -7,7 +7,7 @@ import { getPasswordStrength, STRENGTH_COLORS } from "@/lib/passwordStrength";
 import { pageVariants } from "@/lib/transitions";
 import { cn } from "@/lib/utils";
 
-export function RegisterPage() {
+export function RegisterPage(): React.ReactElement {
   const navigate = useNavigate();
   const { signIn } = useAuthActions();
   const [name, setName] = useState("");

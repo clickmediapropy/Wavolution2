@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,33 +18,27 @@ function getStoredTheme(): Theme {
   return "dark";
 }
 
-function applyTheme(theme: Theme, animate = false) {
+function applyTheme(theme: Theme, animate = false): void {
   const root = document.documentElement;
+  const opposite = theme === "dark" ? "light" : "dark";
 
   if (animate) {
     root.classList.add("theme-transition");
   }
 
-  if (theme === "dark") {
-    root.classList.add("dark");
-    root.classList.remove("light");
-  } else {
-    root.classList.add("light");
-    root.classList.remove("dark");
-  }
+  root.classList.add(theme);
+  root.classList.remove(opposite);
 
   if (animate) {
-    // Remove transition class after animation completes
     setTimeout(() => root.classList.remove("theme-transition"), 350);
   }
 }
 
-// Apply default theme immediately to avoid flash (no animation)
 if (typeof window !== "undefined") {
   applyTheme(getStoredTheme(), false);
 }
 
-export function useTheme() {
+export function useTheme(): { theme: Theme; toggle: () => void } {
   const [theme, setTheme] = useState<Theme>(getStoredTheme);
 
   useEffect(() => {
@@ -64,7 +59,9 @@ interface ThemeToggleProps {
   isCollapsed?: boolean;
 }
 
-export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps) {
+const iconTransition = { duration: 0.2, ease: "easeInOut" as const };
+
+export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps): ReactNode {
   const { theme, toggle } = useTheme();
   const isDark = theme === "dark";
 
@@ -85,7 +82,7 @@ export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps) {
               initial={{ rotate: -90, scale: 0, opacity: 0 }}
               animate={{ rotate: 0, scale: 1, opacity: 1 }}
               exit={{ rotate: 90, scale: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
+              transition={iconTransition}
               className="absolute inset-0"
             >
               <Moon className="w-5 h-5" />
@@ -96,7 +93,7 @@ export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps) {
               initial={{ rotate: 90, scale: 0, opacity: 0 }}
               animate={{ rotate: 0, scale: 1, opacity: 1 }}
               exit={{ rotate: -90, scale: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
+              transition={iconTransition}
               className="absolute inset-0"
             >
               <Sun className="w-5 h-5" />
@@ -118,7 +115,6 @@ export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps) {
         )}
       </AnimatePresence>
 
-      {/* Tooltip for collapsed state */}
       {isCollapsed && (
         <div className="absolute left-full ml-2 px-2 py-1 bg-surface-elevated text-text-primary text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
           {isDark ? "Switch to Light" : "Switch to Dark"}

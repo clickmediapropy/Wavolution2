@@ -1,13 +1,13 @@
-import { Component, type ReactNode, type ErrorInfo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  AlertTriangle, 
-  RotateCcw, 
-  ChevronDown, 
+import { Component, type ErrorInfo, type ReactNode, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  AlertTriangle,
+  Bug,
+  ChevronDown,
   ChevronUp,
   Home,
-  Bug,
-  LifeBuoy
+  LifeBuoy,
+  RotateCcw,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -21,8 +21,12 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-// Error details component with collapsible stack trace
-function ErrorDetails({ error, errorInfo }: { error: Error; errorInfo: ErrorInfo | null }) {
+interface ErrorDetailsProps {
+  error: Error;
+  errorInfo: ErrorInfo | null;
+}
+
+function ErrorDetails({ error, errorInfo }: ErrorDetailsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -105,9 +109,7 @@ export class ErrorBoundary extends Component<Props, State> {
             transition={{ duration: 0.3 }}
             className="w-full max-w-lg"
           >
-            {/* Card */}
             <div className="bg-zinc-900/80 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8 shadow-2xl">
-              {/* Header with illustration */}
               <div className="text-center mb-8">
                 <motion.div
                   initial={{ scale: 0 }}
@@ -120,7 +122,6 @@ export class ErrorBoundary extends Component<Props, State> {
                     <AlertTriangle className="w-10 h-10 text-white" />
                   </div>
                   
-                  {/* Animated pulse rings */}
                   <motion.div
                     animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
                     transition={{ duration: 2, repeat: Infinity }}
@@ -148,7 +149,6 @@ export class ErrorBoundary extends Component<Props, State> {
                 </motion.p>
               </div>
 
-              {/* Quick actions */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -172,7 +172,6 @@ export class ErrorBoundary extends Component<Props, State> {
                 </Link>
               </motion.div>
 
-              {/* Help section */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -198,20 +197,18 @@ export class ErrorBoundary extends Component<Props, State> {
                 </div>
               </motion.div>
 
-              {/* Error details (collapsible) */}
               {this.state.error && (
                 <ErrorDetails error={this.state.error} errorInfo={this.state.errorInfo} />
               )}
             </div>
 
-            {/* Footer */}
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6 }}
               className="text-center text-xs text-zinc-600 mt-6"
             >
-              Message Hub • Error ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}
+              Message Hub
             </motion.p>
           </motion.div>
         </div>

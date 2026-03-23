@@ -15,20 +15,13 @@ import {
   Play,
 } from "lucide-react";
 import { toast } from "sonner";
+import { CAMPAIGN_STATUS_STYLES } from "@/lib/types";
 import type { Id } from "@convex/_generated/dataModel";
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    draft: "bg-zinc-700 text-zinc-300",
-    running: "bg-emerald-500/10 text-emerald-400",
-    paused: "bg-amber-500/10 text-amber-400",
-    completed: "bg-blue-500/10 text-blue-400",
-    stopped: "bg-red-500/10 text-red-400",
-  };
-
+function StatusBadge({ status }: { status: string }): React.ReactElement {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${styles[status] ?? styles.draft}`}
+      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${CAMPAIGN_STATUS_STYLES[status] ?? CAMPAIGN_STATUS_STYLES.draft}`}
     >
       {(status === "running" || status === "paused") && (
         <span className="relative flex h-2 w-2">
@@ -61,6 +54,19 @@ function formatEta(ms: number): string {
   return `~${hr}h ${remainMin}m remaining`;
 }
 
+function getProgressBarColor(status: string): string {
+  switch (status) {
+    case "stopped":
+      return "bg-red-500";
+    case "completed":
+      return "bg-blue-500";
+    case "paused":
+      return "bg-amber-500";
+    default:
+      return "bg-emerald-500";
+  }
+}
+
 export function CampaignStatusPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -72,41 +78,21 @@ export function CampaignStatusPage() {
   const pauseCampaign = useMutation(api.campaigns.pause);
   const resumeCampaign = useMutation(api.campaigns.resume);
 
-  const handleStop = async () => {
+  async function handleCampaignAction(
+    action: typeof stopCampaign,
+    successMessage: string,
+    errorMessage: string,
+  ): Promise<void> {
     if (!id) return;
     try {
-      await stopCampaign({ id: id as Id<"campaigns"> });
-      toast.success("Campaign stopped");
+      await action({ id: id as Id<"campaigns"> });
+      toast.success(successMessage);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to stop campaign",
+        err instanceof Error ? err.message : errorMessage,
       );
     }
-  };
-
-  const handlePause = async () => {
-    if (!id) return;
-    try {
-      await pauseCampaign({ id: id as Id<"campaigns"> });
-      toast.success("Campaign paused");
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to pause campaign",
-      );
-    }
-  };
-
-  const handleResume = async () => {
-    if (!id) return;
-    try {
-      await resumeCampaign({ id: id as Id<"campaigns"> });
-      toast.success("Campaign resumed");
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to resume campaign",
-      );
-    }
-  };
+  }
 
   if (campaign === undefined) {
     return (
@@ -150,14 +136,15 @@ export function CampaignStatusPage() {
 
   const startedDate = campaign.startedAt
     ? new Date(campaign.startedAt).toLocaleString()
-    : "—";
+    : "\u2014";
   const completedDate = campaign.completedAt
     ? new Date(campaign.completedAt).toLocaleString()
-    : "—";
+    : "\u2014";
+
+  const isActive = campaign.status === "running" || campaign.status === "paused";
 
   return (
     <div className="animate-fadeIn max-w-3xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button
@@ -178,45 +165,35 @@ export function CampaignStatusPage() {
 
         <div className="flex items-center gap-2">
           {campaign.status === "running" && (
-            <>
-              <button
-                onClick={handlePause}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg hover:bg-amber-500/20 transition-colors"
-              >
-                <Pause className="w-4 h-4" />
-                Pause
-              </button>
-              <button
-                onClick={handleStop}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
-              >
-                <Square className="w-4 h-4" />
-                Stop
-              </button>
-            </>
+            <button
+              onClick={() => handleCampaignAction(pauseCampaign, "Campaign paused", "Failed to pause campaign")}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg hover:bg-amber-500/20 transition-colors"
+            >
+              <Pause className="w-4 h-4" />
+              Pause
+            </button>
           )}
           {campaign.status === "paused" && (
-            <>
-              <button
-                onClick={handleResume}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-colors"
-              >
-                <Play className="w-4 h-4" />
-                Resume
-              </button>
-              <button
-                onClick={handleStop}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
-              >
-                <Square className="w-4 h-4" />
-                Stop
-              </button>
-            </>
+            <button
+              onClick={() => handleCampaignAction(resumeCampaign, "Campaign resumed", "Failed to resume campaign")}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-colors"
+            >
+              <Play className="w-4 h-4" />
+              Resume
+            </button>
+          )}
+          {isActive && (
+            <button
+              onClick={() => handleCampaignAction(stopCampaign, "Campaign stopped", "Failed to stop campaign")}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
+            >
+              <Square className="w-4 h-4" />
+              Stop
+            </button>
           )}
         </div>
       </div>
 
-      {/* Progress bar */}
       <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6 mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-zinc-300">Progress</span>
@@ -226,15 +203,7 @@ export function CampaignStatusPage() {
         </div>
         <div className="w-full h-3 bg-zinc-800 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-500 ${
-              campaign.status === "stopped"
-                ? "bg-red-500"
-                : campaign.status === "completed"
-                  ? "bg-blue-500"
-                  : campaign.status === "paused"
-                    ? "bg-amber-500"
-                    : "bg-emerald-500"
-            }`}
+            className={`h-full rounded-full transition-all duration-500 ${getProgressBarColor(campaign.status)}`}
             style={{ width: `${progressPct}%` }}
             role="progressbar"
             aria-valuenow={progressPct}
@@ -248,50 +217,13 @@ export function CampaignStatusPage() {
         )}
       </div>
 
-      {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Send className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs text-zinc-500">Sent</span>
-          </div>
-          <p className="text-2xl font-bold text-emerald-400 font-mono">
-            {campaign.sent}
-          </p>
-        </div>
-
-        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <XCircle className="w-4 h-4 text-red-400" />
-            <span className="text-xs text-zinc-500">Failed</span>
-          </div>
-          <p className="text-2xl font-bold text-red-400 font-mono">
-            {campaign.failed}
-          </p>
-        </div>
-
-        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 text-amber-400" />
-            <span className="text-xs text-zinc-500">Remaining</span>
-          </div>
-          <p className="text-2xl font-bold text-amber-400 font-mono">
-            {remaining}
-          </p>
-        </div>
-
-        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-zinc-500">Total</span>
-          </div>
-          <p className="text-2xl font-bold text-blue-400 font-mono">
-            {campaign.total}
-          </p>
-        </div>
+        <StatCard icon={<Send className="w-4 h-4 text-emerald-400" />} label="Sent" value={campaign.sent} color="text-emerald-400" />
+        <StatCard icon={<XCircle className="w-4 h-4 text-red-400" />} label="Failed" value={campaign.failed} color="text-red-400" />
+        <StatCard icon={<Clock className="w-4 h-4 text-amber-400" />} label="Remaining" value={remaining} color="text-amber-400" />
+        <StatCard icon={<CheckCircle2 className="w-4 h-4 text-blue-400" />} label="Total" value={campaign.total} color="text-blue-400" />
       </div>
 
-      {/* Details */}
       <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-6">
         <h3 className="text-sm font-medium text-zinc-300 mb-4">Details</h3>
         <div className="grid grid-cols-2 gap-4 text-sm">
@@ -322,6 +254,28 @@ export function CampaignStatusPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatCard({
+  icon,
+  label,
+  value,
+  color,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  color: string;
+}): React.ReactElement {
+  return (
+    <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
+      <div className="flex items-center gap-2 mb-2">
+        {icon}
+        <span className="text-xs text-zinc-500">{label}</span>
+      </div>
+      <p className={`text-2xl font-bold font-mono ${color}`}>{value}</p>
     </div>
   );
 }
