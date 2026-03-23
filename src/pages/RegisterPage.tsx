@@ -1,10 +1,11 @@
-import { FormEvent, useState, useMemo } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Eye, EyeOff, ArrowRight, Check, X, Sparkles } from "lucide-react";
-import { pageVariants } from "@/lib/transitions";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowRight, Check, Eye, EyeOff, MessageSquare, Sparkles, X } from "lucide-react";
 import { getPasswordStrength, STRENGTH_COLORS } from "@/lib/passwordStrength";
+import { pageVariants } from "@/lib/transitions";
+import { cn } from "@/lib/utils";
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -336,9 +337,4 @@ export function RegisterPage() {
       </div>
     </motion.div>
   );
-}
-
-// Helper function for className concatenation
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
 }

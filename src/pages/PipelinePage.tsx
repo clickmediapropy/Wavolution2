@@ -2,8 +2,7 @@ import { useState, useCallback, DragEvent } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { cn } from "@/lib/utils";
-import { getFullName } from "@/lib/utils";
+import { cn, getFullName } from "@/lib/utils";
 import { motion } from "framer-motion";
 import {
   Kanban,
@@ -18,16 +17,26 @@ import { toast } from "sonner";
 import { staggerContainerVariants, staggerItemVariants } from "@/lib/transitions";
 import { Link } from "react-router-dom";
 
+interface ContactItem {
+  _id: Id<"contacts">;
+  phone: string;
+  firstName?: string;
+  lastName?: string;
+  tags?: string[];
+  engagementScore?: number;
+  pipelineStageId?: Id<"pipelineStages">;
+}
+
+function getBarColor(score: number): string {
+  if (score >= 75) return "bg-blue-500";
+  if (score >= 50) return "bg-emerald-500";
+  if (score >= 25) return "bg-amber-500";
+  return "bg-red-500";
+}
+
 function EngagementBadge({ score }: { score?: number }) {
   if (score === undefined || score === null) return null;
-  const barColor =
-    score >= 75
-      ? "bg-blue-500"
-      : score >= 50
-        ? "bg-emerald-500"
-        : score >= 25
-          ? "bg-amber-500"
-          : "bg-red-500";
+  const barColor = getBarColor(score);
   return (
     <div className="flex items-center gap-1.5 min-w-[3.5rem]">
       <div className="flex-1 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
@@ -45,14 +54,7 @@ function ContactCard({
   contact,
   onDragStart,
 }: {
-  contact: {
-    _id: Id<"contacts">;
-    phone: string;
-    firstName?: string;
-    lastName?: string;
-    tags?: string[];
-    engagementScore?: number;
-  };
+  contact: ContactItem;
   onDragStart: (e: DragEvent<HTMLDivElement>, contactId: Id<"contacts">) => void;
 }) {
   const name = getFullName(contact);
@@ -119,14 +121,7 @@ function StageColumn({
   stageId: string;
   stageName: string;
   stageColor: string;
-  contacts: Array<{
-    _id: Id<"contacts">;
-    phone: string;
-    firstName?: string;
-    lastName?: string;
-    tags?: string[];
-    engagementScore?: number;
-  }>;
+  contacts: ContactItem[];
   onDragStart: (e: DragEvent<HTMLDivElement>, contactId: Id<"contacts">) => void;
   onDrop: (e: DragEvent<HTMLDivElement>, stageId: string) => void;
   onDragOver: (e: DragEvent<HTMLDivElement>, stageId: string) => void;

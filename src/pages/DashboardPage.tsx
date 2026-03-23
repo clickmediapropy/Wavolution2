@@ -26,7 +26,6 @@ export function DashboardPage() {
   const campaigns = useQuery(api.campaigns.listByUser);
   const instanceCounts = useQuery(api.instances.count);
 
-  // Real analytics data
   const dashboardStats = useQuery(api.messages.dashboardStats);
   const messageDailyCounts = useQuery(api.messages.dailyCounts);
   const contactDailyCounts = useQuery(api.messages.contactDailyCounts);
@@ -43,17 +42,14 @@ export function DashboardPage() {
   // Campaign sparkline: use daily message counts scaled down as a proxy
   const campaignSparkline = messageSparkline.map((v) => Math.round(v / 10));
 
-  // Compute real trend values
-  const contactTrend = contactsThisWeek !== undefined && contactCount
-    ? contactsThisWeek > 0 ? "up" as const : "neutral" as const
-    : "neutral" as const;
+  const hasNewContacts = contactsThisWeek !== undefined && contactCount !== undefined && contactsThisWeek > 0;
+  const contactTrend = hasNewContacts ? "up" as const : "neutral" as const;
   const contactTrendValue = contactsThisWeek !== undefined
     ? `+${contactsThisWeek} this week`
     : undefined;
 
-  const messageTrend = messagesToday !== undefined
-    ? messagesToday > 0 ? "up" as const : "neutral" as const
-    : "neutral" as const;
+  const hasNewMessages = messagesToday !== undefined && messagesToday > 0;
+  const messageTrend = hasNewMessages ? "up" as const : "neutral" as const;
   const messageTrendValue = messagesToday !== undefined
     ? `+${messagesToday} today`
     : undefined;

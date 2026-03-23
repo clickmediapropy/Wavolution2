@@ -3,8 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { cn } from "@/lib/utils";
-import { getFullName } from "@/lib/utils";
+import { cn, getFullName } from "@/lib/utils";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -162,11 +161,9 @@ function MessageBubble({
       <div
         className={cn(
           "max-w-[80%] rounded-xl px-3.5 py-2",
-          isNote
-            ? "bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs italic"
-            : isOutgoing
-              ? "bg-emerald-600/20 border border-emerald-500/20 text-zinc-100"
-              : "bg-zinc-800 border border-zinc-700 text-zinc-100",
+          isNote && "bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs italic",
+          !isNote && isOutgoing && "bg-emerald-600/20 border border-emerald-500/20 text-zinc-100",
+          !isNote && !isOutgoing && "bg-zinc-800 border border-zinc-700 text-zinc-100",
         )}
       >
         <p className="text-sm whitespace-pre-wrap break-words">
@@ -270,6 +267,50 @@ function AiSummarySection({
   );
 }
 
+function getEngagementTier(score: number): { barColor: string; labelColor: string; label: string } {
+  if (score >= 75) return { barColor: "bg-blue-500", labelColor: "text-blue-400", label: "High" };
+  if (score >= 50) return { barColor: "bg-emerald-500", labelColor: "text-emerald-400", label: "Good" };
+  if (score >= 25) return { barColor: "bg-amber-500", labelColor: "text-amber-400", label: "Low" };
+  return { barColor: "bg-red-500", labelColor: "text-red-400", label: "Very Low" };
+}
+
+function EngagementMeter({ score }: { score?: number | null }) {
+  const hasScore = score !== undefined && score !== null;
+  const tier = hasScore
+    ? getEngagementTier(score)
+    : { barColor: "bg-zinc-600", labelColor: "text-zinc-500", label: "No data" };
+
+  return (
+    <div className="mb-5">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <Star className="w-3.5 h-3.5 text-amber-400" />
+          <span className="text-xs text-zinc-500">Engagement Score</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={cn("text-xs font-medium", tier.labelColor)}>
+            {tier.label}
+          </span>
+          <span className="text-lg font-bold text-zinc-100">
+            {hasScore ? score : "\u2014"}
+          </span>
+        </div>
+      </div>
+      <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+        <div
+          className={cn("h-full rounded-full transition-all duration-500", tier.barColor)}
+          style={{ width: hasScore ? `${score}%` : "0%" }}
+        />
+      </div>
+      <div className="flex justify-between mt-1">
+        {[0, 25, 50, 75, 100].map((n) => (
+          <span key={n} className="text-[10px] text-zinc-600">{n}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
   const detail = useQuery(
@@ -362,77 +403,7 @@ export function ContactDetailPage() {
               </div>
             </div>
 
-            {/* Engagement meter */}
-            {(() => {
-              const score = contact.engagementScore;
-              const hasScore = score !== undefined && score !== null;
-              const barColor =
-                !hasScore
-                  ? "bg-zinc-600"
-                  : score >= 75
-                    ? "bg-blue-500"
-                    : score >= 50
-                      ? "bg-emerald-500"
-                      : score >= 25
-                        ? "bg-amber-500"
-                        : "bg-red-500";
-              const labelColor =
-                !hasScore
-                  ? "text-zinc-500"
-                  : score >= 75
-                    ? "text-blue-400"
-                    : score >= 50
-                      ? "text-emerald-400"
-                      : score >= 25
-                        ? "text-amber-400"
-                        : "text-red-400";
-              const label =
-                !hasScore
-                  ? "No data"
-                  : score >= 75
-                    ? "High"
-                    : score >= 50
-                      ? "Good"
-                      : score >= 25
-                        ? "Low"
-                        : "Very Low";
-              return (
-                <div className="mb-5">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5">
-                      <Star className="w-3.5 h-3.5 text-amber-400" />
-                      <span className="text-xs text-zinc-500">
-                        Engagement Score
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={cn("text-xs font-medium", labelColor)}>
-                        {label}
-                      </span>
-                      <span className="text-lg font-bold text-zinc-100">
-                        {hasScore ? score : "—"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-500",
-                        barColor,
-                      )}
-                      style={{ width: hasScore ? `${score}%` : "0%" }}
-                    />
-                  </div>
-                  <div className="flex justify-between mt-1">
-                    <span className="text-[10px] text-zinc-600">0</span>
-                    <span className="text-[10px] text-zinc-600">25</span>
-                    <span className="text-[10px] text-zinc-600">50</span>
-                    <span className="text-[10px] text-zinc-600">75</span>
-                    <span className="text-[10px] text-zinc-600">100</span>
-                  </div>
-                </div>
-              );
-            })()}
+            <EngagementMeter score={contact.engagementScore} />
 
             {/* Stats row */}
             <div className="grid grid-cols-1 gap-3 mb-5">

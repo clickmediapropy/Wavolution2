@@ -1,11 +1,8 @@
-import { ReactNode, useState, useEffect, useCallback } from "react";
+import { type ReactNode, useState, useEffect, useCallback } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { useConvexAuth } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { CommandPalette } from "@/components/CommandPalette";
 import {
   MessageSquare,
   LogOut,
@@ -25,6 +22,9 @@ import {
   Activity,
 } from "lucide-react";
 import { Toaster } from "sonner";
+import { cn } from "@/lib/utils";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { CommandPalette } from "@/components/CommandPalette";
 import { ThemeToggle, useTheme } from "@/components/ThemeToggle";
 import { PwaInstallBanner } from "@/components/PwaInstallBanner";
 

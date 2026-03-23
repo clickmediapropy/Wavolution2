@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -30,6 +30,35 @@ import {
 import { toast } from "sonner";
 import type { Id } from "@convex/_generated/dataModel";
 import { InboxNotificationToggle } from "../components/InboxNotification";
+
+const MEDIA_MAX_HEIGHT = 200;
+
+const TIME_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  hour: "2-digit",
+  minute: "2-digit",
+};
+
+const EMPTY_STATE_LABELS: Record<FilterTab, string> = {
+  all: "No conversations",
+  unread: "No unread conversations",
+  bot: "No bot mode conversations",
+  human: "No human mode conversations",
+  archived: "No archived conversations",
+};
+
+function getStatusIcon(status: string | undefined): string {
+  switch (status) {
+    case "read":
+    case "delivered":
+      return "\u2713\u2713";
+    case "sent":
+      return "\u2713";
+    case "failed":
+      return "\u2717";
+    default:
+      return "\u231B";
+  }
+}
 
 function formatTimeAgo(timestamp: number): string {
   const delta = Date.now() - timestamp;
@@ -75,8 +104,7 @@ function MediaPreview({
         <img
           src={url}
           alt="Shared image"
-          className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity mb-1"
-          style={{ maxHeight: 200 }}
+          className="max-w-full max-h-[200px] rounded-lg cursor-pointer hover:opacity-90 transition-opacity mb-1"
           onClick={() => setEnlarged(true)}
         />
         {enlarged && (

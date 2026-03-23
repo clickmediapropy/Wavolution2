@@ -13,7 +13,6 @@ import {
 import { toast } from "sonner";
 import type { Doc } from "@convex/_generated/dataModel";
 
-// Instance card for a single WhatsApp instance
 function InstanceCard({
   instance,
   onDelete,
@@ -28,7 +27,6 @@ function InstanceCard({
   const [isLoadingQr, setIsLoadingQr] = useState(false);
   const [qrError, setQrError] = useState("");
 
-  // Fetch QR code
   const fetchQr = useCallback(async () => {
     setIsLoadingQr(true);
     setQrError("");
@@ -44,7 +42,6 @@ function InstanceCard({
     }
   }, [instance.name, getQrCode]);
 
-  // Auto-fetch QR when not connected
   useEffect(() => {
     if (!instance.whatsappConnected) {
       fetchQr();

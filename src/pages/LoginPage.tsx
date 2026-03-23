@@ -2,8 +2,9 @@ import { FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { motion } from "framer-motion";
-import { MessageSquare, Eye, EyeOff, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, MessageSquare, Sparkles } from "lucide-react";
 import { pageVariants } from "@/lib/transitions";
+import { cn } from "@/lib/utils";
 
 export function LoginPage() {
   const { signIn } = useAuthActions();
@@ -283,9 +284,4 @@ export function LoginPage() {
       </div>
     </motion.div>
   );
-}
-
-// Helper function for className concatenation
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(" ");
 }

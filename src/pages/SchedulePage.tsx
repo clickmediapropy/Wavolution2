@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -19,9 +19,7 @@ export function SchedulePage() {
 
   const [campaignName, setCampaignName] = useState("");
   const [messageTemplate, setMessageTemplate] = useState("");
-  const [recipientType, setRecipientType] = useState<
-    "all" | "pending"
-  >("all");
+  const [recipientType, setRecipientType] = useState<"all" | "pending">("all");
   const [selectedInstanceId, setSelectedInstanceId] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
@@ -36,19 +34,23 @@ export function SchedulePage() {
     return allContacts.length;
   }, [recipientType, allContacts]);
 
-  // Auto-select if only one connected instance
-  if (connectedInstances?.length === 1 && !selectedInstanceId) {
-    setSelectedInstanceId(connectedInstances[0]!._id);
-  }
+  useEffect(() => {
+    if (connectedInstances?.length === 1 && !selectedInstanceId) {
+      setSelectedInstanceId(connectedInstances[0]!._id);
+    }
+  }, [connectedInstances, selectedInstanceId]);
 
-  const instanceOptions = (connectedInstances ?? []).map((inst) => ({
-    value: inst._id,
-    label: inst.whatsappNumber
-      ? `${inst.name} (${inst.whatsappNumber})`
-      : inst.name,
-  }));
+  const instanceOptions = useMemo(
+    () =>
+      (connectedInstances ?? []).map((inst) => ({
+        value: inst._id,
+        label: inst.whatsappNumber
+          ? `${inst.name} (${inst.whatsappNumber})`
+          : inst.name,
+      })),
+    [connectedInstances],
+  );
 
-  // Compute minimum datetime (now + 2 minutes)
   const minDate = useMemo(() => {
     const d = new Date(Date.now() + 2 * 60 * 1000);
     return d.toISOString().slice(0, 10);
