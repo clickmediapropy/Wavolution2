@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { StatsCard } from "@/components/StatsCard";
 import { Users } from "lucide-react";
+
+vi.mock("react-countup", () => ({
+  default: ({ end }: { end: number }) => <span>{end}</span>,
+}));
 
 describe("StatsCard", () => {
   it("renders label and value", () => {
