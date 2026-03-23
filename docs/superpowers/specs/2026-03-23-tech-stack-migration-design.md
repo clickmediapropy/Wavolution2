@@ -20,7 +20,7 @@ Message Hub is a WhatsApp bulk messaging platform built on Flask + SQLite + Jinj
 ### Target Stack
 - **Frontend:** Vite+ (`vp` CLI) + React + Tailwind CSS + shadcn/ui, hosted on Vercel
 - **Database:** Convex Cloud (real-time reactive database)
-- **Auth:** Custom username/password (no email verification)
+- **Auth:** Convex Auth with Password provider (email/password, managed sessions)
 - **VPS:** Evolution API (already running at `wavolution.agentifycrm.io`) + Node.js campaign worker
 - **Language:** TypeScript everywhere
 
@@ -36,7 +36,7 @@ Message Hub is a WhatsApp bulk messaging platform built on Flask + SQLite + Jinj
 │  │  - vp dev / vp build / vp test / vp check             │    │
 │  │  - Tailwind CSS + shadcn/ui                           │    │
 │  │  - Convex React client (useQuery, useMutation)        │    │
-│  │  - Custom auth (username/password)                    │    │
+│  │  - Convex Auth (email/password via Password provider)  │    │
 │  │  - React Router for page navigation                   │    │
 │  └──────────────────────┬──────────────────────────────┘    │
 └─────────────────────────┼───────────────────────────────────┘
@@ -80,12 +80,18 @@ Message Hub is a WhatsApp bulk messaging platform built on Flask + SQLite + Jinj
 
 ## Convex Data Model
 
+### Authentication: Convex Auth with Password provider
+
+Auth is handled by `@convex-dev/auth` with the built-in `Password` provider. This eliminates custom session management, password hashing, and token storage. All functions use `ctx.auth.getUserIdentity()` to get the authenticated user. No `sessionToken` argument needed on any function.
+
+Setup: `convex/auth.config.ts` configures the Password provider. `convex/auth.ts` exports `{ auth, signIn, signOut, store }`. React wraps the app in `<ConvexAuthProvider>`.
+
 ### `users` table
+
+Convex Auth automatically creates its own auth tables. The `users` table extends the auth user with app-specific fields:
 
 | Field | Type | Notes |
 |-------|------|-------|
-| `username` | `string` | Unique, used for login |
-| `passwordHash` | `string` | bcrypt hash |
 | `name` | `string` | Display name |
 | `evolutionInstanceName` | `string` (optional) | Unique per user |
 | `evolutionApiKey` | `string` (optional) | Per-instance key |
@@ -94,7 +100,7 @@ Message Hub is a WhatsApp bulk messaging platform built on Flask + SQLite + Jinj
 | `connectionStatus` | `string` | `"disconnected"` / `"connecting"` / `"open"` |
 | `instanceCreated` | `boolean` | Default `false` |
 
-Indexes: `by_username` on `["username"]`
+Indexes: none needed (Convex Auth manages user lookup by identity)
 
 ### `contacts` table
 
@@ -151,22 +157,12 @@ Campaign media files are stored using **Convex file storage**. Flow:
 
 This handles the gap between upload time and campaign processing (which may be hours later). Convex file storage supports files up to 256MB, well above the 50MB video limit.
 
-### `sessions` table
-
-| Field | Type | Notes |
-|-------|------|-------|
-| `userId` | `Id<"users">` | Foreign key |
-| `token` | `string` | Session token |
-| `expiresAt` | `number` | Timestamp |
-
-Indexes: `by_token` on `["token"]`
-
 ### Notes
 - Convex auto-generates `_id` (unique ID) and `_creationTime` (timestamp) on every document.
-- No `password_reset_tokens` table needed (no email-based password reset).
+- **No custom sessions table** — Convex Auth manages sessions, tokens, and password hashing internally via `httpOnly` cookies.
 - Campaigns are now **persisted** — survives restarts, enables resume after crashes.
-- **Session cleanup:** A Convex cron job (`convex/crons.ts`) runs hourly to delete expired sessions from the `sessions` table.
-- **Auth functions use `"use node"`:** `login` and `register` are Convex actions (not mutations) because bcrypt requires the Node.js runtime. They call internal mutations to write data.
+- **`generateUploadUrl` must be auth-protected** — the mutation that generates upload URLs must check `ctx.auth.getUserIdentity()` to prevent unauthenticated uploads.
+- **VPS worker should use a service token** (not `CONVEX_DEPLOY_KEY`) to limit blast radius if the VPS is compromised. Use Convex HTTP actions with a shared secret instead.
 
 ---
 
@@ -205,16 +201,19 @@ Indexes: `by_token` on `["token"]`
 | `LoadingSpinner` | Loading state for Convex queries (`useQuery` returns `undefined` while loading) |
 | `ErrorBoundary` | Error boundary for query/mutation failures |
 
-### Auth Flow
+### Auth Flow (Convex Auth)
 
-Session-based custom auth. Convex doesn't have HTTP headers on WebSocket calls, so the session token is passed as an argument to every Convex function.
+Managed by `@convex-dev/auth` — no custom token handling needed.
 
-1. `LoginPage` calls Convex **action** `login({ username, password })` (must be an action with `"use node"` directive because bcrypt requires Node.js runtime) → validates credentials, creates session document via internal mutation, returns `{ token, userId }`
-2. Token stored in `localStorage`. A React context provider (`AuthProvider`) reads the token and passes it to all Convex calls.
-3. Every Convex query/mutation that requires auth takes a `sessionToken: string` parameter. A shared `getAuthenticatedUser(ctx, sessionToken)` helper validates the token against the `sessions` table and returns the user document (or throws).
-4. `ProtectedRoute` calls `useQuery(api.auth.me, { sessionToken })` — if it returns null or throws, redirects to `/`.
-5. `WhatsAppGuard` checks the authenticated user's `instanceCreated` and `whatsappConnected` fields.
-6. Logout calls Convex mutation `logout({ sessionToken })` → deletes session document. React clears localStorage.
+1. `LoginPage` calls `signIn("password", { email, password })` via the Convex Auth React hooks.
+2. `RegisterPage` calls `signIn("password", { email, password, flow: "signUp" })` — the Password provider handles registration.
+3. Convex Auth manages sessions via `httpOnly` cookies (more secure than localStorage).
+4. All Convex functions call `ctx.auth.getUserIdentity()` to get the authenticated user. No `sessionToken` argument needed.
+5. `ProtectedRoute` uses `useConvexAuth()` hook — `isAuthenticated` boolean determines access.
+6. `WhatsAppGuard` queries the user document to check `instanceCreated` and `whatsappConnected`.
+7. Logout calls `signOut()` from the Convex Auth React hooks.
+
+**Note:** Convex Auth's Password provider uses email as the identifier. If username-only is needed, we'll investigate during implementation — worst case, use email as the login identifier.
 
 ### Styling
 - **Tailwind CSS** installed via PostCSS (not CDN)
@@ -290,7 +289,7 @@ Node.js/TypeScript Express server running as a Docker container on the VPS along
 - Docker container added to existing `docker-compose.yml` on VPS
 - Shares Docker Compose network with Evolution API container — access via Docker service name (e.g., `http://evolution-api:8080`), not `localhost` (unless using `network_mode: host`)
 - `EVOLUTION_API_URL` env var handles the correct address regardless of networking mode
-- Environment variables: `CONVEX_URL`, `CONVEX_DEPLOY_KEY`, `VPS_API_SECRET`, `EVOLUTION_API_URL` (e.g., `http://evolution-api:8080`), `EVOLUTION_API_KEY`
+- Environment variables: `CONVEX_URL`, `CONVEX_AUTH_TOKEN` (service token, NOT deploy key — limits blast radius), `VPS_API_SECRET`, `EVOLUTION_API_URL` (e.g., `http://evolution-api:8080`), `EVOLUTION_API_KEY`
 
 ---
 
@@ -298,8 +297,8 @@ Node.js/TypeScript Express server running as a Docker container on the VPS along
 
 Every feature from the Flask app must be present in the new stack:
 
-- [ ] User registration (username/password only — does NOT create Evolution instance)
-- [ ] User login/logout (session-based, token in localStorage)
+- [ ] User registration (email/password via Convex Auth — does NOT create Evolution instance)
+- [ ] User login/logout (Convex Auth managed sessions, httpOnly cookies)
 - [ ] WhatsApp setup (create Evolution API instance — separate step at `/setup` after registration)
 - [ ] WhatsApp connection (QR code display + status polling)
 - [ ] Dashboard (stats: total contacts, messages sent, today's messages, connection status)
@@ -362,17 +361,14 @@ wavolution2/
 │   │   ├── SetupWhatsAppPage.tsx
 │   │   └── ConnectWhatsAppPage.tsx
 │   ├── lib/                      # Utilities
-│   │   ├── auth.ts               # Auth context provider + token management
 │   │   └── utils.ts              # cn() utility for shadcn/ui
-│   ├── App.tsx                   # Router setup + ConvexProvider + AuthProvider
+│   ├── App.tsx                   # Router setup + ConvexAuthProvider
 │   ├── main.tsx                  # Entry point
 │   └── index.css                 # Tailwind imports
 ├── convex/                       # Convex backend
 │   ├── schema.ts                 # Table definitions
-│   ├── auth.ts                   # Login/register/logout actions ("use node") + me query
-│   ├── crons.ts                  # Scheduled jobs (session cleanup)
-│   ├── lib/
-│   │   └── auth.ts               # getAuthenticatedUser(ctx, sessionToken) helper
+│   ├── auth.config.ts             # Convex Auth configuration (Password provider)
+│   ├── auth.ts                   # Convex Auth exports (auth, signIn, signOut, store)
 │   ├── users.ts                  # User queries and mutations
 │   ├── contacts.ts               # Contact CRUD queries/mutations
 │   ├── campaigns.ts              # Campaign queries/mutations
