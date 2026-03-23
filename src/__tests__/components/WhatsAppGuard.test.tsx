@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vite-plus/test";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { WhatsAppGuard } from "@/components/WhatsAppGuard";
 

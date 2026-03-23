@@ -3,12 +3,7 @@
 
 @theme {
   --font-sans: "Sora", ui-sans-serif, system-ui, sans-serif;
-  
-  /* Surface colors */
-  --color-surface-base: #09090b;
-  --color-surface-card: #18181b;
-  --color-surface-elevated: #27272a;
-  
+
   /* Theme colors */
   --color-emerald-50: #ecfdf5;
   --color-emerald-100: #d1fae5;
@@ -20,12 +15,36 @@
   --color-emerald-700: #047857;
   --color-emerald-800: #065f46;
   --color-emerald-900: #064e3b;
-  
-  /* Semantic tokens */
+
+  /* Surface colors — dark defaults (overridden by light theme below) */
+  --color-surface-base: #09090b;
+  --color-surface-card: #18181b;
+  --color-surface-elevated: #27272a;
+
+  /* Semantic tokens — dark defaults */
   --color-text-primary: #f8fafc;
   --color-text-secondary: #94a3b8;
   --color-text-muted: #64748b;
   --color-border-default: rgba(63, 63, 70, 0.5);
+}
+
+/* ── Theme transition ───────────────────────────────── */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+/* ── Light theme overrides ──────────────────────────── */
+html.light {
+  --color-surface-base: #f8fafc;
+  --color-surface-card: #ffffff;
+  --color-surface-elevated: #f1f5f9;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+  --color-border-default: rgba(148, 163, 184, 0.3);
 }
 
 @layer base {
@@ -39,20 +58,58 @@
     background-color: rgb(16 185 129 / 0.3);
   }
 
+  /* Scrollbar — dark */
+  .dark ::-webkit-scrollbar,
+  .dark::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .dark ::-webkit-scrollbar-track,
+  .dark::-webkit-scrollbar-track {
+    background: #27272a;
+  }
+  .dark ::-webkit-scrollbar-thumb,
+  .dark::-webkit-scrollbar-thumb {
+    background: #52525b;
+    border-radius: 4px;
+  }
+  .dark ::-webkit-scrollbar-thumb:hover,
+  .dark::-webkit-scrollbar-thumb:hover {
+    background: #71717a;
+  }
+
+  /* Scrollbar — light */
+  .light ::-webkit-scrollbar,
+  .light::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .light ::-webkit-scrollbar-track,
+  .light::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  .light ::-webkit-scrollbar-thumb,
+  .light::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  .light ::-webkit-scrollbar-thumb:hover,
+  .light::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Fallback scrollbar for when no theme class yet */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
-
   ::-webkit-scrollbar-track {
     background: #27272a;
   }
-
   ::-webkit-scrollbar-thumb {
     background: #52525b;
     border-radius: 4px;
   }
-
   ::-webkit-scrollbar-thumb:hover {
     background: #71717a;
   }

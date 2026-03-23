@@ -1,6 +1,6 @@
-import "@testing-library/jest-dom/vitest";
+import "@testing-library/jest-dom";
 import React from "react";
-import { vi } from "vitest";
+import { vi } from "vite-plus/test";
 
 // IntersectionObserver polyfill for jsdom (needed by framer-motion viewport features)
 if (typeof globalThis.IntersectionObserver === "undefined") {

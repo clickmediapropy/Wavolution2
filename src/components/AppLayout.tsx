@@ -1,9 +1,11 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, useCallback } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useConvexAuth } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { CommandPalette } from "@/components/CommandPalette";
 import {
   MessageSquare,
   LogOut,
@@ -20,8 +22,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
+  Activity,
 } from "lucide-react";
 import { Toaster } from "sonner";
+import { ThemeToggle, useTheme } from "@/components/ThemeToggle";
+import { PwaInstallBanner } from "@/components/PwaInstallBanner";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -32,6 +37,7 @@ const navItems = [
   { to: "/send", label: "Send Message", icon: Send },
   { to: "/bots", label: "Bots", icon: Bot },
   { to: "/whatsapp", label: "WhatsApp", icon: Smartphone },
+  { to: "/activity", label: "Activity", icon: Activity },
 ] as const;
 
 interface SidebarProps {
@@ -48,10 +54,10 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       initial={false}
       animate={{ width: isCollapsed ? 72 : 240 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="fixed left-0 top-0 h-screen bg-zinc-900/95 backdrop-blur-xl border-r border-zinc-800 z-50 flex flex-col hidden md:flex"
+      className="fixed left-0 top-0 h-screen bg-surface-card/95 backdrop-blur-xl border-r border-border-default z-50 flex flex-col hidden md:flex"
     >
       {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-zinc-800">
+      <div className="h-16 flex items-center px-4 border-b border-border-default">
         <Link
           to="/dashboard"
           className={cn(
@@ -89,7 +95,7 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group relative",
                 isActive
                   ? "bg-emerald-500/10 text-emerald-400"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50"
+                  : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated/50"
               )}
             >
               <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "animate-pulse-dot")} />
@@ -127,11 +133,14 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       </nav>
 
       {/* Bottom section */}
-      <div className="p-3 border-t border-zinc-800 space-y-1">
-        <button
-          onClick={() => {}}
+      <div className="p-3 border-t border-border-default space-y-1">
+        <NavLink
+          to="/settings"
           className={cn(
-            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 transition-all group",
+            "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group",
+            location.pathname === "/settings"
+              ? "bg-emerald-500/10 text-emerald-400"
+              : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated/50",
             isCollapsed && "justify-center"
           )}
         >
@@ -148,8 +157,10 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               </motion.span>
             )}
           </AnimatePresence>
-        </button>
-        
+        </NavLink>
+
+        <ThemeToggle isCollapsed={isCollapsed} />
+
         <button
           onClick={() => void signOut()}
           className={cn(
@@ -251,7 +262,7 @@ function MobileNav({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
                         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
                         isActive
                           ? "bg-emerald-500/10 text-emerald-400"
-                          : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50"
+                          : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated/50"
                       )}
                     >
                       <Icon className="w-5 h-5" />
@@ -261,7 +272,20 @@ function MobileNav({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
                 })}
               </nav>
 
-              <div className="mt-4 pt-4 border-t border-zinc-800">
+              <div className="mt-4 pt-4 border-t border-border-default space-y-1">
+                <NavLink
+                  to="/settings"
+                  onClick={onClose}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
+                    location.pathname === "/settings"
+                      ? "bg-emerald-500/10 text-emerald-400"
+                      : "text-text-secondary hover:text-text-primary hover:bg-surface-elevated/50"
+                  )}
+                >
+                  <Settings className="w-5 h-5" />
+                  <span className="font-medium">Settings</span>
+                </NavLink>
                 <button
                   onClick={() => {
                     onClose();
@@ -283,8 +307,29 @@ function MobileNav({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useConvexAuth();
+  const { theme } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  const toggleCommandPalette = useCallback(
+    () => setCommandPaletteOpen((prev) => !prev),
+    [],
+  );
+  const closeCommandPalette = useCallback(
+    () => setCommandPaletteOpen(false),
+    [],
+  );
+
+  // Global keyboard shortcuts (only when authenticated)
+  useKeyboardShortcuts(
+    isAuthenticated
+      ? {
+          onCommandPalette: toggleCommandPalette,
+          onCloseModal: closeCommandPalette,
+        }
+      : {},
+  );
 
   // Load sidebar state from localStorage
   useEffect(() => {
@@ -300,7 +345,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-surface-base">
       {isAuthenticated && (
         <Sidebar 
           isCollapsed={sidebarCollapsed} 
@@ -380,7 +425,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </div>
 
       <MobileNav isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
-      <Toaster richColors position="top-right" theme="dark" />
+      {isAuthenticated && (
+        <CommandPalette isOpen={commandPaletteOpen} onClose={closeCommandPalette} />
+      )}
+      <PwaInstallBanner />
+      <Toaster richColors position="top-right" theme={theme} />
     </div>
   );
 }

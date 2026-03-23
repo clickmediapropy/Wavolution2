@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vite-plus/test";
 import { MediaUpload } from "@/components/MediaUpload";
 
 const mockGenerateUploadUrl = vi.fn().mockResolvedValue("https://upload.url");

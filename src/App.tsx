@@ -16,10 +16,25 @@ import { SendMessagePage } from "./pages/SendMessagePage";
 import { BulkCampaignPage } from "./pages/BulkCampaignPage";
 import { CampaignStatusPage } from "./pages/CampaignStatusPage";
 import { CampaignHistoryPage } from "./pages/CampaignHistoryPage";
+import { CampaignAnalyticsPage } from "./pages/CampaignAnalyticsPage";
 import { InboxPage } from "./pages/InboxPage";
 import { BotConfigPage } from "./pages/BotConfigPage";
+import { BotGoalsPage } from "./pages/BotGoalsPage";
+import { KnowledgeBasePage } from "./pages/KnowledgeBasePage";
 import { PipelinePage } from "./pages/PipelinePage";
 import { ContactDetailPage } from "./pages/ContactDetailPage";
+import { ContactSegmentsPage } from "./pages/ContactSegmentsPage";
+import { QuickRepliesPage } from "./pages/QuickRepliesPage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { ExportPage } from "./pages/ExportPage";
+import { ActivityLogPage } from "./pages/ActivityLogPage";
+import { SchedulePage } from "./pages/SchedulePage";
+import { WhatsAppStatusPage } from "./pages/WhatsAppStatusPage";
+import { TemplatesPage } from "./pages/TemplatesPage";
+import { WebhookLogPage } from "./pages/WebhookLogPage";
+import { AutoFollowupPage } from "./pages/AutoFollowupPage";
+import { APIDocsPage } from "./pages/APIDocsPage";
+import { ContactMergePage } from "./pages/ContactMergePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { WhatsAppGuard } from "./components/WhatsAppGuard";
 
@@ -89,6 +104,14 @@ export default function App() {
                 }
               />
               <Route
+                path="/contacts/segments"
+                element={
+                  <ProtectedRoute>
+                    <ContactSegmentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/contacts/upload"
                 element={
                   <ProtectedRoute>
@@ -106,6 +129,14 @@ export default function App() {
               />
               <Route path="/whatsapp/setup" element={<Navigate to="/whatsapp" replace />} />
               <Route path="/whatsapp/connect" element={<Navigate to="/whatsapp" replace />} />
+              <Route
+                path="/whatsapp/status"
+                element={
+                  <ProtectedRoute>
+                    <WhatsAppStatusPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/send"
                 element={
@@ -125,10 +156,26 @@ export default function App() {
                 }
               />
               <Route
+                path="/campaigns/analytics"
+                element={
+                  <ProtectedRoute>
+                    <CampaignAnalyticsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/campaigns/new"
                 element={
                   <ProtectedRoute>
                     <BulkCampaignPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/campaigns/schedule"
+                element={
+                  <ProtectedRoute>
+                    <SchedulePage />
                   </ProtectedRoute>
                 }
               />
@@ -161,6 +208,70 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <BotConfigPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/knowledge-base"
+                element={
+                  <ProtectedRoute>
+                    <KnowledgeBasePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/bot-goals"
+                element={
+                  <ProtectedRoute>
+                    <BotGoalsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/quick-replies"
+                element={
+                  <ProtectedRoute>
+                    <QuickRepliesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/followups"
+                element={
+                  <ProtectedRoute>
+                    <AutoFollowupPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/templates"
+                element={
+                  <ProtectedRoute>
+                    <TemplatesPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/export"
+                element={
+                  <ProtectedRoute>
+                    <ExportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/activity"
+                element={
+                  <ProtectedRoute>
+                    <ActivityLogPage />
                   </ProtectedRoute>
                 }
               />

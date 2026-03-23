@@ -1,7 +1,8 @@
 import { httpAction } from "./_generated/server";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 // --- HTTP action: receives Evolution API webhook events ---
 
@@ -19,6 +20,9 @@ export const handleEvolutionWebhook = httpAction(async (ctx, req) => {
     if (!event || !data) {
       return new Response("Missing event or data", { status: 400 });
     }
+
+    // Truncate data for logging (500 chars max)
+    const truncatedData = JSON.stringify(data).slice(0, 500);
 
     switch (event) {
       case "messages.update": {
@@ -71,6 +75,15 @@ export const handleEvolutionWebhook = httpAction(async (ctx, req) => {
           );
 
           if (instance) {
+            // Skip messages from blocked contacts
+            const blocked = await ctx.runQuery(
+              internal.webhooks.isContactBlocked,
+              { userId: instance.userId, phone },
+            );
+            if (blocked) {
+              break;
+            }
+
             await ctx.runMutation(internal.webhooks.logIncomingMessage, {
               instanceId: instance._id,
               userId: instance.userId,
@@ -138,8 +151,28 @@ export const handleEvolutionWebhook = httpAction(async (ctx, req) => {
       }
     }
 
+    // Log successful webhook event
+    await ctx.runMutation(internal.webhooks.logWebhookEvent, {
+      event,
+      instanceName: instanceName || "unknown",
+      data: truncatedData,
+      status: "success",
+    });
+
     return new Response("OK", { status: 200 });
-  } catch {
+  } catch (err) {
+    // Attempt to log the error event
+    try {
+      const errorMsg = err instanceof Error ? err.message : "Unknown error";
+      await ctx.runMutation(internal.webhooks.logWebhookEvent, {
+        event: "parse_error",
+        instanceName: "unknown",
+        data: JSON.stringify({ error: errorMsg }).slice(0, 500),
+        status: "error",
+      });
+    } catch {
+      // Ignore logging failures to avoid masking the original error
+    }
     return new Response("Internal error", { status: 500 });
   }
 });
@@ -153,6 +186,22 @@ export const getInstanceByName = internalQuery({
       .query("instances")
       .withIndex("by_name", (q) => q.eq("name", args.name))
       .first();
+  },
+});
+
+export const isContactBlocked = internalQuery({
+  args: {
+    userId: v.id("users"),
+    phone: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const contact = await ctx.db
+      .query("contacts")
+      .withIndex("by_userId_and_phone", (q) =>
+        q.eq("userId", args.userId).eq("phone", args.phone),
+      )
+      .unique();
+    return contact?.isBlocked === true;
   },
 });
 
@@ -365,5 +414,41 @@ export const updateConnectionState = internalMutation({
       state: args.state,
       timestamp: Date.now(),
     });
+  },
+});
+
+// --- Webhook logging ---
+
+export const logWebhookEvent = internalMutation({
+  args: {
+    event: v.string(),
+    instanceName: v.string(),
+    data: v.string(),
+    status: v.union(v.literal("success"), v.literal("error")),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("webhookLogs", {
+      event: args.event,
+      instanceName: args.instanceName,
+      timestamp: Date.now(),
+      data: args.data,
+      status: args.status,
+    });
+  },
+});
+
+// --- Public queries (auth-protected) ---
+
+export const listRecentLogs = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    return await ctx.db
+      .query("webhookLogs")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .take(100);
   },
 });

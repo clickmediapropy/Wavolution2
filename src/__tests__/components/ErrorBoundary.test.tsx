@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vite-plus/test";
 import { MemoryRouter } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 

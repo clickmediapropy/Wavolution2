@@ -162,6 +162,9 @@ export const updateBotSettings = mutation({
     id: v.id("instances"),
     botEnabled: v.optional(v.boolean()),
     botSystemPrompt: v.optional(v.string()),
+    temperature: v.optional(v.number()),
+    welcomeMessage: v.optional(v.string()),
+    fallbackMessage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthedUserId(ctx);
@@ -173,6 +176,9 @@ export const updateBotSettings = mutation({
     const patch: Record<string, unknown> = {};
     if (args.botEnabled !== undefined) patch.botEnabled = args.botEnabled;
     if (args.botSystemPrompt !== undefined) patch.botSystemPrompt = args.botSystemPrompt;
+    if (args.temperature !== undefined) patch.temperature = args.temperature;
+    if (args.welcomeMessage !== undefined) patch.welcomeMessage = args.welcomeMessage;
+    if (args.fallbackMessage !== undefined) patch.fallbackMessage = args.fallbackMessage;
 
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(args.id, patch);
@@ -190,5 +196,88 @@ export const remove = mutation({
       throw new Error("Instance not found");
     }
     await ctx.db.delete(args.id);
+  },
+});
+
+// Detailed status for all instances (WhatsApp Status page)
+export const getDetailedStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthedUserId(ctx);
+    const instances = await ctx.db
+      .query("instances")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(50);
+
+    const now = Date.now();
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayMs = todayStart.getTime();
+
+    const results = [];
+
+    for (const inst of instances) {
+      // Connection events for uptime + last disconnection
+      const events = await ctx.db
+        .query("connectionEvents")
+        .withIndex("by_instanceId", (q) => q.eq("instanceId", inst._id))
+        .order("desc")
+        .take(100);
+
+      // Last disconnection
+      const lastClose = events.find((e) => e.state === "close");
+      const lastDisconnectedAt = lastClose ? lastClose.timestamp : null;
+
+      // Uptime: time since last "open" event (if currently connected)
+      let uptimeMs: number | null = null;
+      if (inst.whatsappConnected) {
+        const lastOpen = events.find((e) => e.state === "open");
+        if (lastOpen) {
+          uptimeMs = now - lastOpen.timestamp;
+        }
+      }
+
+      // Messages for this instance
+      const instanceMessages = await ctx.db
+        .query("messages")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .order("desc")
+        .take(500);
+
+      const instMessages = instanceMessages.filter(
+        (m) => m.instanceId === inst._id,
+      );
+
+      // Success rate (last 100 outgoing for this instance)
+      const outgoing = instMessages.filter((m) => m.direction !== "incoming");
+      const recentOutgoing = outgoing.slice(0, 100);
+      let successRate = 100;
+      if (recentOutgoing.length > 0) {
+        const successful = recentOutgoing.filter(
+          (m) => m.status !== "failed",
+        ).length;
+        successRate = Math.round((successful / recentOutgoing.length) * 100);
+      }
+
+      // Messages sent today for this instance
+      const sentToday = outgoing.filter(
+        (m) => m._creationTime > todayMs,
+      ).length;
+
+      results.push({
+        _id: inst._id,
+        name: inst.name,
+        connectionStatus: inst.connectionStatus,
+        whatsappConnected: inst.whatsappConnected,
+        whatsappNumber: inst.whatsappNumber ?? null,
+        uptimeMs,
+        lastDisconnectedAt,
+        successRate,
+        sentToday,
+      });
+    }
+
+    return results;
   },
 });

@@ -43,6 +43,9 @@ const schema = defineSchema({
     // Bot settings
     botEnabled: v.optional(v.boolean()), // whether auto-reply bot is active
     botSystemPrompt: v.optional(v.string()), // system prompt for AI auto-replies
+    temperature: v.optional(v.number()), // LLM temperature for bot responses (0-1)
+    welcomeMessage: v.optional(v.string()), // first message sent to new conversations
+    fallbackMessage: v.optional(v.string()), // reply when bot can't generate a response
   })
     .index("by_userId", ["userId"])
     .index("by_userId_and_name", ["userId", "name"])
@@ -98,6 +101,7 @@ const schema = defineSchema({
     ),
     aiSummary: v.optional(v.string()), // AI-generated contact summary
     aiSummaryGeneratedAt: v.optional(v.number()),
+    isBlocked: v.optional(v.boolean()), // blocked contacts are excluded from webhook processing
   })
     .index("by_userId", ["userId"])
     .index("by_userId_and_phone", ["userId", "phone"])
@@ -128,7 +132,11 @@ const schema = defineSchema({
     .index("by_campaignId", ["campaignId"])
     .index("by_conversationId", ["conversationId"])
     .index("by_userId_and_phone", ["userId", "phone"])
-    .index("by_whatsappMessageId", ["whatsappMessageId"]),
+    .index("by_whatsappMessageId", ["whatsappMessageId"])
+    .searchIndex("search_by_message", {
+      searchField: "message",
+      filterFields: ["userId"],
+    }),
 
   // Track instance connection events for uptime and disconnection timestamps
   connectionEvents: defineTable({
@@ -154,7 +162,10 @@ const schema = defineSchema({
     mediaStorageIds: v.optional(v.array(v.id("_storage"))),
     startedAt: v.optional(v.number()),
     completedAt: v.optional(v.number()),
-  }).index("by_userId", ["userId"]),
+    scheduledAt: v.optional(v.number()), // timestamp for scheduled send
+  })
+    .index("by_userId", ["userId"])
+    .index("by_status_and_scheduledAt", ["status", "scheduledAt"]),
 
   // --- NEW TABLES ---
 
@@ -204,6 +215,41 @@ const schema = defineSchema({
     position: v.number(), // ordering index
   }).index("by_userId", ["userId"]),
 
+  // Campaign message templates (full templates with variable placeholders)
+  templates: defineTable({
+    userId: v.id("users"),
+    name: v.string(), // template label
+    category: v.string(), // Greeting | Follow-up | Promotion | Support
+    content: v.string(), // message body with {{variable}} placeholders
+    variables: v.array(v.string()), // extracted variable names
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_category", ["userId", "category"]),
+
+  // Activity log for timeline / audit trail
+  activityLogs: defineTable({
+    userId: v.id("users"),
+    type: v.string(), // campaign_started | campaign_completed | message_sent | message_failed | contact_imported | bot_replied | conversation_archived
+    description: v.string(),
+    metadata: v.optional(
+      v.record(v.string(), v.union(v.string(), v.number(), v.boolean())),
+    ),
+  })
+    .index("by_userId", ["userId"]),
+
+  // Followup sequences — automated multi-step delayed message flows
+  followupSequences: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    steps: v.array(
+      v.object({
+        delayMinutes: v.number(),
+        messageTemplate: v.string(),
+      }),
+    ),
+    isActive: v.boolean(),
+  }).index("by_userId", ["userId"]),
+
   // Internal notes on conversations (not sent via WhatsApp)
   conversationNotes: defineTable({
     conversationId: v.id("conversations"),
@@ -211,6 +257,15 @@ const schema = defineSchema({
     text: v.string(),
     createdAt: v.number(),
   }).index("by_conversationId", ["conversationId"]),
+
+  // Webhook event logs for debugging/auditing
+  webhookLogs: defineTable({
+    event: v.string(), // e.g. messages.upsert, connection.update
+    instanceName: v.string(),
+    timestamp: v.number(),
+    data: v.string(), // JSON stringified, truncated to 500 chars
+    status: v.union(v.literal("success"), v.literal("error")),
+  }).index("by_timestamp", ["timestamp"]),
 });
 
 export default schema;

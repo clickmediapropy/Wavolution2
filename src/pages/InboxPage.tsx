@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -23,9 +23,13 @@ import {
   X,
   CheckSquare,
   Square,
+  ArchiveRestore,
+  ShieldOff,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Id } from "@convex/_generated/dataModel";
+import { InboxNotificationToggle } from "../components/InboxNotification";
 
 function formatTimeAgo(timestamp: number): string {
   const delta = Date.now() - timestamp;
@@ -118,12 +122,28 @@ function MediaPreview({
   );
 }
 
+type FilterTab = "all" | "unread" | "bot" | "human" | "archived";
+
+const FILTER_TABS: { key: FilterTab; label: string; icon: typeof Inbox }[] = [
+  { key: "all", label: "All", icon: Inbox },
+  { key: "unread", label: "Unread", icon: Mail },
+  { key: "bot", label: "Bot Mode", icon: Bot },
+  { key: "human", label: "Human Mode", icon: User },
+  { key: "archived", label: "Archived", icon: Archive },
+];
+
 export function InboxPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+
   const conversations = useQuery(api.conversations.list, { archived: false });
+  const archivedConversations = useQuery(
+    api.conversations.list,
+    activeFilter === "archived" ? { archived: true } : "skip",
+  );
   const selectedConversation = useQuery(
     api.conversations.get,
     conversationId
@@ -137,6 +157,24 @@ export function InboxPage() {
       : "skip",
   );
   const quickReplies = useQuery(api.quickReplies.list);
+  const allContacts = useQuery(api.contacts.exportAll);
+
+  // Build a phone -> engagementScore lookup for showing engagement dots
+  const engagementByPhone = useMemo(() => {
+    const map = new Map<string, number>();
+    if (allContacts) {
+      for (const c of allContacts) {
+        if (c.engagementScore !== undefined && c.engagementScore !== null) {
+          map.set(c.phone, c.engagementScore);
+        }
+      }
+    }
+    return map;
+  }, [allContacts]);
+  const messageSearchResults = useQuery(
+    api.messages.searchMessages,
+    searchQuery.trim().length >= 2 ? { query: searchQuery.trim() } : "skip",
+  );
 
   const sendMessage = useMutation(api.conversations.sendMessage);
   const addNote = useMutation(api.conversations.addNote);
@@ -148,6 +186,14 @@ export function InboxPage() {
   const toggleMode = useMutation(api.conversations.toggleMode);
 
   const generateDraft = useAction(api.ai.generateMessageDraft);
+
+  // Contact lookup for block/unblock in chat header
+  const contactForConv = useQuery(
+    api.contacts.getByPhone,
+    selectedConversation?.phone ? { phone: selectedConversation.phone } : "skip",
+  );
+  const blockContact = useMutation(api.contacts.block);
+  const unblockContact = useMutation(api.contacts.unblock);
 
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -185,16 +231,33 @@ export function InboxPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Filter conversations by search
-  const filteredConversations = conversations?.filter((c) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      c.contactName?.toLowerCase().includes(q) ||
-      c.phone.toLowerCase().includes(q) ||
-      c.lastMessageText?.toLowerCase().includes(q)
-    );
-  });
+  // Pick the base list depending on active filter tab
+  const baseConversations =
+    activeFilter === "archived" ? archivedConversations : conversations;
+
+  // Apply tab filter, then search
+  const filteredConversations = baseConversations
+    ?.filter((c) => {
+      switch (activeFilter) {
+        case "unread":
+          return c.unreadCount > 0;
+        case "bot":
+          return c.status === "bot";
+        case "human":
+          return c.status === "human";
+        default:
+          return true; // "all" and "archived" show everything in their list
+      }
+    })
+    .filter((c) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        c.contactName?.toLowerCase().includes(q) ||
+        c.phone.toLowerCase().includes(q) ||
+        c.lastMessageText?.toLowerCase().includes(q)
+      );
+    });
 
   const hasSelection = selectedConvIds.size > 0;
 
@@ -279,8 +342,13 @@ export function InboxPage() {
     }
   };
 
-  // Loading state
-  if (conversations === undefined) {
+  // Loading state — wait for the active list to be available
+  const isLoading =
+    activeFilter === "archived"
+      ? archivedConversations === undefined
+      : conversations === undefined;
+
+  if (isLoading) {
     return (
       <div role="status" className="flex items-center justify-center py-20">
         <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
@@ -294,11 +362,14 @@ export function InboxPage() {
       <div className="flex items-center gap-3 mb-4">
         <Inbox className="w-7 h-7 text-emerald-500" />
         <h1 className="text-2xl font-bold text-zinc-100">Inbox</h1>
-        {conversations.length > 0 && (
+        {conversations && conversations.length > 0 && (
           <span className="text-sm text-zinc-500">
             {conversations.filter((c) => c.unreadCount > 0).length} unread
           </span>
         )}
+        <div className="ml-auto">
+          <InboxNotificationToggle />
+        </div>
       </div>
 
       <div className="flex gap-4 h-[calc(100%-3rem)]">
@@ -310,7 +381,7 @@ export function InboxPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
               <input
                 type="text"
-                placeholder="Search conversations..."
+                placeholder="Search conversations & messages..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 text-zinc-100 placeholder:text-zinc-500 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none"
@@ -318,12 +389,55 @@ export function InboxPage() {
             </div>
           </div>
 
+          {/* Filter tabs */}
+          <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-800 overflow-x-auto scrollbar-none">
+            {FILTER_TABS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => {
+                  setActiveFilter(key);
+                  setSelectedConvIds(new Set());
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                  activeFilter === key
+                    ? "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30"
+                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                }`}
+              >
+                <Icon className="w-3 h-3" />
+                {label}
+                {/* Show count badge for unread tab */}
+                {key === "unread" && conversations && (
+                  <span
+                    className={`ml-0.5 text-[10px] ${
+                      activeFilter === "unread"
+                        ? "text-emerald-400"
+                        : "text-zinc-600"
+                    }`}
+                  >
+                    {conversations.filter((c) => c.unreadCount > 0).length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
           {/* Conversation list */}
           <div className="flex-1 overflow-y-auto">
             {filteredConversations && filteredConversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
-                <MessageSquare className="w-8 h-8 mb-2" />
-                <p className="text-sm">No conversations</p>
+                {activeFilter === "archived" ? (
+                  <ArchiveRestore className="w-8 h-8 mb-2" />
+                ) : (
+                  <MessageSquare className="w-8 h-8 mb-2" />
+                )}
+                <p className="text-sm">
+                  {activeFilter === "all" && "No conversations"}
+                  {activeFilter === "unread" && "No unread conversations"}
+                  {activeFilter === "bot" && "No bot mode conversations"}
+                  {activeFilter === "human" && "No human mode conversations"}
+                  {activeFilter === "archived" && "No archived conversations"}
+                </p>
               </div>
             ) : (
               filteredConversations?.map((conv) => {
@@ -362,6 +476,12 @@ export function InboxPage() {
                           {conv.status === "bot" && (
                             <Bot className="w-3 h-3 text-violet-400 flex-shrink-0" />
                           )}
+                          {(engagementByPhone.get(conv.phone) ?? 0) > 70 && (
+                            <span
+                              className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"
+                              title={`Engagement: ${engagementByPhone.get(conv.phone)}`}
+                            />
+                          )}
                         </div>
                         {typing ? (
                           <p className="text-xs text-emerald-400 mt-0.5 flex items-center gap-1.5">
@@ -393,6 +513,49 @@ export function InboxPage() {
                 );
               })
             )}
+
+            {/* Message search results */}
+            {searchQuery.trim().length >= 2 &&
+              messageSearchResults &&
+              messageSearchResults.length > 0 && (
+                <div className="border-t border-zinc-700">
+                  <div className="px-3 py-2 bg-zinc-800/50">
+                    <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
+                      Messages ({messageSearchResults.length})
+                    </p>
+                  </div>
+                  {messageSearchResults.map((result) => (
+                    <button
+                      key={result._id}
+                      onClick={() =>
+                        handleSelectConversation(result.conversationId)
+                      }
+                      className={`w-full text-left p-3 border-b border-zinc-800/50 hover:bg-zinc-800/50 transition-colors ${
+                        conversationId === result.conversationId
+                          ? "bg-zinc-800"
+                          : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <Search className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                        <span className="text-xs font-medium text-zinc-300 truncate">
+                          {result.conversationContactName ||
+                            result.conversationPhone}
+                        </span>
+                        <span className="text-[10px] text-zinc-600 ml-auto flex-shrink-0">
+                          {formatTimeAgo(result._creationTime)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-500 truncate pl-5">
+                        {result.direction === "outgoing" && (
+                          <span className="text-zinc-600">You: </span>
+                        )}
+                        {result.message}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
           </div>
         </div>
 

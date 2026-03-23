@@ -267,3 +267,52 @@ export const successRate = query({
     return Math.round((successful / outgoing.length) * 100);
   },
 });
+
+// Full-text search messages by content
+export const searchMessages = query({
+  args: { query: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    if (!args.query.trim()) return [];
+
+    const results = await ctx.db
+      .query("messages")
+      .withSearchIndex("search_by_message", (q) =>
+        q.search("message", args.query).eq("userId", userId),
+      )
+      .take(20);
+
+    // Group by conversationId and return with conversation info
+    const conversationIds = [
+      ...new Set(
+        results
+          .map((m) => m.conversationId)
+          .filter((id): id is NonNullable<typeof id> => id != null),
+      ),
+    ];
+
+    const conversations = await Promise.all(
+      conversationIds.map((id) => ctx.db.get(id)),
+    );
+    const convMap = new Map(
+      conversations
+        .filter((c): c is NonNullable<typeof c> => c != null)
+        .map((c) => [c._id, c]),
+    );
+
+    return results
+      .filter((m) => m.conversationId != null)
+      .map((m) => ({
+        _id: m._id,
+        message: m.message,
+        conversationId: m.conversationId!,
+        direction: m.direction,
+        _creationTime: m._creationTime,
+        conversationPhone: convMap.get(m.conversationId!)?.phone ?? "",
+        conversationContactName:
+          convMap.get(m.conversationId!)?.contactName ?? null,
+      }));
+  },
+});

@@ -28,6 +28,7 @@ export const create = mutation({
     mediaStorageIds: v.optional(v.array(v.id("_storage"))),
     delay: v.number(),
     total: v.number(),
+    scheduledAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthedUserId(ctx);
@@ -60,6 +61,7 @@ export const create = mutation({
       messageTemplate: args.messageTemplate.trim(),
       hasMedia: args.hasMedia,
       mediaStorageIds: args.mediaStorageIds,
+      scheduledAt: args.scheduledAt,
     });
   },
 });

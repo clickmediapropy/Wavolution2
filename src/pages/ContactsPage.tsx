@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { usePaginatedQuery, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Users, Plus, Upload, Search, Download } from "lucide-react";
+import { Users, Plus, Upload, Search, Download, Tag, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { ContactTable } from "@/components/ContactTable";
 import { ContactFormDialog } from "@/components/ContactFormDialog";
@@ -30,6 +30,10 @@ export function ContactsPage() {
   // Status filter state
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
+  // Tag filter state
+  const [tagFilter, setTagFilter] = useState<string>("all");
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+
   // Queries
   const allContacts = useQuery(api.contacts.exportAll);
   const totalCount = useQuery(api.contacts.count);
@@ -48,6 +52,8 @@ export function ContactsPage() {
   const updateContact = useMutation(api.contacts.update);
   const removeContact = useMutation(api.contacts.remove);
   const removeMultiple = useMutation(api.contacts.removeMultiple);
+  const bulkAddTag = useMutation(api.contacts.bulkAddTag);
+  const bulkRemoveTag = useMutation(api.contacts.bulkRemoveTag);
 
   // Dialog state — unified for add/edit
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -59,17 +65,39 @@ export function ContactsPage() {
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Determine which contacts to show, with optional status filter
+  // Bulk tag management state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [addTagPopoverOpen, setAddTagPopoverOpen] = useState(false);
+  const [removeTagPopoverOpen, setRemoveTagPopoverOpen] = useState(false);
+  const [newTagInput, setNewTagInput] = useState("");
+  const [isApplyingTag, setIsApplyingTag] = useState(false);
+  const addTagInputRef = useRef<HTMLInputElement>(null);
+
+  // Compute unique tags from all contacts for the filter dropdown
+  const uniqueTags = useMemo(() => {
+    if (!allContacts) return [];
+    const tagSet = new Set<string>();
+    for (const c of allContacts) {
+      if (c.tags) {
+        for (const t of c.tags) tagSet.add(t);
+      }
+    }
+    return Array.from(tagSet).sort();
+  }, [allContacts]);
+
+  // Determine which contacts to show, with optional status + tag filter
   const isSearching = debouncedSearch.length > 0;
   const displayContacts = isSearching
     ? searchResults ?? []
     : paginatedContacts.results;
   const filteredContacts = useMemo(
     () =>
-      statusFilter === "all"
-        ? displayContacts
-        : displayContacts.filter((c: any) => c.status === statusFilter),
-    [displayContacts, statusFilter],
+      displayContacts.filter((c: any) => {
+        if (statusFilter !== "all" && c.status !== statusFilter) return false;
+        if (tagFilter !== "all" && (!c.tags || !c.tags.includes(tagFilter))) return false;
+        return true;
+      }),
+    [displayContacts, statusFilter, tagFilter],
   );
 
   // Handlers
@@ -147,11 +175,17 @@ export function ContactsPage() {
       toast.error("No contacts to export");
       return;
     }
-    const header = "name,last_name,phone,status";
+    const header = "phone,firstName,lastName,status,tags,engagementScore,repliedAt";
     const rows = allContacts.map((c) => {
-      const first = c.firstName || "";
-      const last = c.lastName || "";
-      return `"${first.replace(/"/g, '""')}","${last.replace(/"/g, '""')}","${c.phone}","${c.status}"`;
+      const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+      const phone = esc(c.phone);
+      const firstName = esc(c.firstName || "");
+      const lastName = esc(c.lastName || "");
+      const status = esc(c.status);
+      const tags = esc((c.tags || []).join(";"));
+      const engagementScore = c.engagementScore !== undefined ? String(c.engagementScore) : "";
+      const repliedAt = c.repliedAt !== undefined ? new Date(c.repliedAt).toISOString() : "";
+      return `${phone},${firstName},${lastName},${status},${tags},${engagementScore},${repliedAt}`;
     });
     const csv = [header, ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -169,6 +203,61 @@ export function ContactsPage() {
     setDialogError("");
     setDialogOpen(true);
   }, []);
+
+  // Bulk tag handlers
+  const handleSelectionChange = useCallback((ids: string[]) => {
+    setSelectedIds(ids);
+    // Close popovers when selection changes to empty
+    if (ids.length === 0) {
+      setAddTagPopoverOpen(false);
+      setRemoveTagPopoverOpen(false);
+    }
+  }, []);
+
+  // Compute tags from currently selected contacts
+  const selectedContactTags = useMemo(() => {
+    if (selectedIds.length === 0) return [];
+    const tagSet = new Set<string>();
+    const allDisplayed = filteredContacts as any[];
+    for (const c of allDisplayed) {
+      if (selectedIds.includes(c._id) && c.tags) {
+        for (const t of c.tags) tagSet.add(t);
+      }
+    }
+    return Array.from(tagSet).sort();
+  }, [selectedIds, filteredContacts]);
+
+  const handleBulkAddTag = useCallback(async () => {
+    const tag = newTagInput.trim();
+    if (!tag || selectedIds.length === 0) return;
+    setIsApplyingTag(true);
+    try {
+      const result = await bulkAddTag({ contactIds: selectedIds as any, tag });
+      toast.success(`Tag "${tag}" added to ${result.updated} contact${result.updated !== 1 ? "s" : ""}`);
+      setNewTagInput("");
+      setAddTagPopoverOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add tag");
+    } finally {
+      setIsApplyingTag(false);
+    }
+  }, [newTagInput, selectedIds, bulkAddTag]);
+
+  const handleBulkRemoveTag = useCallback(async (tag: string) => {
+    if (selectedIds.length === 0) return;
+    setIsApplyingTag(true);
+    try {
+      const result = await bulkRemoveTag({ contactIds: selectedIds as any, tag });
+      toast.success(`Tag "${tag}" removed from ${result.updated} contact${result.updated !== 1 ? "s" : ""}`);
+      // Close popover if no more tags left
+      const remainingTags = selectedContactTags.filter((t) => t !== tag);
+      if (remainingTags.length === 0) setRemoveTagPopoverOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to remove tag");
+    } finally {
+      setIsApplyingTag(false);
+    }
+  }, [selectedIds, bulkRemoveTag, selectedContactTags]);
 
   return (
     <div className="animate-fadeIn">
@@ -214,27 +303,89 @@ export function ContactsPage() {
         </div>
       </div>
 
-      {/* Filter chips */}
-      <div className="flex items-center gap-2 mb-4" role="group" aria-label="Filter by status">
-        {statusFilters.map((filter) => {
-          const isActive = statusFilter === filter;
-          const isAll = filter === "all";
-          const chipClass = isActive
-            ? isAll
-              ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
-              : statusConfig[filter]?.activeBg ?? ""
-            : "bg-transparent border-zinc-700 text-zinc-400 hover:bg-zinc-800";
-          return (
+      {/* Filter chips + tag dropdown */}
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-2" role="group" aria-label="Filter by status">
+          {statusFilters.map((filter) => {
+            const isActive = statusFilter === filter;
+            const isAll = filter === "all";
+            const chipClass = isActive
+              ? isAll
+                ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
+                : statusConfig[filter]?.activeBg ?? ""
+              : "bg-transparent border-zinc-700 text-zinc-400 hover:bg-zinc-800";
+            return (
+              <button
+                key={filter}
+                onClick={() => setStatusFilter(filter)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors capitalize ${chipClass}`}
+                aria-pressed={isActive}
+              >
+                {filter}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tag filter dropdown */}
+        {uniqueTags.length > 0 && (
+          <div className="relative">
             <button
-              key={filter}
-              onClick={() => setStatusFilter(filter)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors capitalize ${chipClass}`}
-              aria-pressed={isActive}
+              onClick={() => setTagDropdownOpen((o) => !o)}
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                tagFilter !== "all"
+                  ? "bg-violet-500/20 border-violet-500/50 text-violet-400"
+                  : "bg-transparent border-zinc-700 text-zinc-400 hover:bg-zinc-800"
+              }`}
+              aria-haspopup="listbox"
+              aria-expanded={tagDropdownOpen}
+              aria-label="Filter by tag"
             >
-              {filter}
+              <Tag className="w-3 h-3" />
+              {tagFilter === "all" ? "All Tags" : tagFilter}
+              <ChevronDown className={`w-3 h-3 transition-transform ${tagDropdownOpen ? "rotate-180" : ""}`} />
             </button>
-          );
-        })}
+            {tagDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setTagDropdownOpen(false)}
+                />
+                <div className="absolute left-0 top-full mt-1 z-20 min-w-[160px] max-h-60 overflow-y-auto bg-zinc-800 border border-zinc-700 rounded-lg shadow-lg py-1">
+                  <button
+                    onClick={() => {
+                      setTagFilter("all");
+                      setTagDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                      tagFilter === "all"
+                        ? "text-violet-400 bg-violet-500/10"
+                        : "text-zinc-300 hover:bg-zinc-700"
+                    }`}
+                  >
+                    All Tags
+                  </button>
+                  {uniqueTags.map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => {
+                        setTagFilter(tag);
+                        setTagDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                        tagFilter === tag
+                          ? "text-violet-400 bg-violet-500/10"
+                          : "text-zinc-300 hover:bg-zinc-700"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Search */}
@@ -258,8 +409,135 @@ export function ContactsPage() {
         onEdit={openEdit}
         onDelete={handleDelete}
         onDeleteSelected={handleDeleteSelected}
+        onSelectionChange={handleSelectionChange}
         totalCount={totalCount ?? undefined}
       />
+
+      {/* Floating bulk action bar */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl shadow-black/50 animate-fadeIn">
+          <span className="text-sm font-medium text-zinc-300">
+            {selectedIds.length} selected
+          </span>
+          <div className="w-px h-5 bg-zinc-700" />
+
+          {/* Add Tag */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setAddTagPopoverOpen((o) => !o);
+                setRemoveTagPopoverOpen(false);
+                setTimeout(() => addTagInputRef.current?.focus(), 50);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/20 transition-colors"
+              aria-label="Add tag to selected contacts"
+            >
+              <Tag className="w-3.5 h-3.5" />
+              Add Tag
+            </button>
+            {addTagPopoverOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setAddTagPopoverOpen(false)}
+                />
+                <div className="absolute bottom-full left-0 mb-2 z-20 w-64 bg-zinc-800 border border-zinc-700 rounded-xl shadow-xl p-3">
+                  <p className="text-xs text-zinc-400 mb-2">
+                    Add a tag to {selectedIds.length} contact{selectedIds.length !== 1 ? "s" : ""}
+                  </p>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleBulkAddTag();
+                    }}
+                    className="flex gap-2"
+                  >
+                    <input
+                      ref={addTagInputRef}
+                      type="text"
+                      value={newTagInput}
+                      onChange={(e) => setNewTagInput(e.target.value)}
+                      placeholder="Tag name..."
+                      className="flex-1 px-3 py-1.5 text-sm bg-zinc-900 border border-zinc-600 text-zinc-100 placeholder:text-zinc-500 rounded-lg focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none"
+                      disabled={isApplyingTag}
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newTagInput.trim() || isApplyingTag}
+                      className="px-3 py-1.5 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isApplyingTag ? "..." : "Add"}
+                    </button>
+                  </form>
+                  {/* Quick-pick from existing tags */}
+                  {uniqueTags.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-zinc-700">
+                      <p className="text-xs text-zinc-500 mb-1.5">Existing tags</p>
+                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                        {uniqueTags.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => {
+                              setNewTagInput(tag);
+                              addTagInputRef.current?.focus();
+                            }}
+                            className="px-2 py-0.5 text-xs text-zinc-300 bg-zinc-700 rounded-md hover:bg-zinc-600 transition-colors"
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Remove Tag */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setRemoveTagPopoverOpen((o) => !o);
+                setAddTagPopoverOpen(false);
+              }}
+              disabled={selectedContactTags.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg hover:bg-red-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Remove tag from selected contacts"
+            >
+              <X className="w-3.5 h-3.5" />
+              Remove Tag
+            </button>
+            {removeTagPopoverOpen && selectedContactTags.length > 0 && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setRemoveTagPopoverOpen(false)}
+                />
+                <div className="absolute bottom-full left-0 mb-2 z-20 w-64 bg-zinc-800 border border-zinc-700 rounded-xl shadow-xl p-3">
+                  <p className="text-xs text-zinc-400 mb-2">
+                    Remove a tag from {selectedIds.length} contact{selectedIds.length !== 1 ? "s" : ""}
+                  </p>
+                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                    {selectedContactTags.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => handleBulkRemoveTag(tag)}
+                        disabled={isApplyingTag}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-zinc-200 bg-zinc-700 rounded-full hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 border border-zinc-600 transition-colors disabled:opacity-50"
+                      >
+                        {tag}
+                        <X className="w-3 h-3" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Dialogs */}
       <ContactFormDialog

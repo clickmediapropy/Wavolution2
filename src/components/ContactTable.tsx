@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Pencil, Trash2, Users, Loader2, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -11,6 +11,8 @@ interface Contact {
   lastName?: string;
   status: string;
   sentAt?: number;
+  tags?: string[];
+  engagementScore?: number;
 }
 
 function contactDisplayName(c: Contact): string {
@@ -25,6 +27,7 @@ interface ContactTableProps {
   onEdit: (contact: Contact) => void;
   onDelete: (id: string) => void;
   onDeleteSelected: (ids: string[]) => void;
+  onSelectionChange?: (selectedIds: string[]) => void;
   totalCount?: number;
 }
 
@@ -71,11 +74,17 @@ export function ContactTable({
   onEdit,
   onDelete,
   onDeleteSelected,
+  onSelectionChange,
   totalCount,
 }: ContactTableProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  // Notify parent when selection changes
+  useEffect(() => {
+    onSelectionChange?.(Array.from(selected));
+  }, [selected, onSelectionChange]);
 
   function handleSort(field: "name" | "status") {
     if (sortField === field) {
@@ -259,6 +268,9 @@ export function ContactTable({
                   )}
                 </button>
               </th>
+              <th className="text-center px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                Engagement
+              </th>
               <th className="text-right px-4 py-3 text-xs font-medium text-zinc-400 uppercase tracking-wider">
                 Actions
               </th>
@@ -305,6 +317,23 @@ export function ContactTable({
                       />
                       {contact.status}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {(() => {
+                      const score = contact.engagementScore;
+                      if (score === undefined || score === null) return <span className="text-zinc-600">&mdash;</span>;
+                      const dotColor =
+                        score >= 75 ? "bg-blue-500" :
+                        score >= 50 ? "bg-emerald-500" :
+                        score >= 25 ? "bg-amber-500" :
+                        "bg-red-500";
+                      return (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                          <span className="text-xs text-zinc-400">{score}</span>
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button

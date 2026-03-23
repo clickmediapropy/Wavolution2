@@ -20,16 +20,24 @@ import { Link } from "react-router-dom";
 
 function EngagementBadge({ score }: { score?: number }) {
   if (score === undefined || score === null) return null;
-  const color =
-    score >= 70
-      ? "bg-emerald-500/20 text-emerald-400"
-      : score >= 40
-        ? "bg-amber-500/20 text-amber-400"
-        : "bg-zinc-700/50 text-zinc-400";
+  const barColor =
+    score >= 75
+      ? "bg-blue-500"
+      : score >= 50
+        ? "bg-emerald-500"
+        : score >= 25
+          ? "bg-amber-500"
+          : "bg-red-500";
   return (
-    <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full", color)}>
-      {score}
-    </span>
+    <div className="flex items-center gap-1.5 min-w-[3.5rem]">
+      <div className="flex-1 h-1.5 bg-zinc-700 rounded-full overflow-hidden">
+        <div
+          className={cn("h-full rounded-full", barColor)}
+          style={{ width: `${score}%` }}
+        />
+      </div>
+      <span className="text-[10px] text-zinc-500 tabular-nums">{score}</span>
+    </div>
   );
 }
 

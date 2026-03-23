@@ -6,6 +6,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { RecentMessages } from "@/components/RecentMessages";
 import { QuickActions } from "@/components/QuickActions";
+import { OnboardingProgress } from "@/components/OnboardingProgress";
 import { staggerContainerVariants, staggerItemVariants } from "@/lib/transitions";
 
 function formatResponseTime(minutes: number | null): string {
@@ -80,6 +81,9 @@ export function DashboardPage() {
           <span className="text-xs text-zinc-400">{connected ? "All systems operational" : "WhatsApp disconnected"}</span>
         </div>
       </motion.div>
+
+      {/* Onboarding progress (hidden once all steps complete) */}
+      <OnboardingProgress />
 
       {/* Stats grid */}
       <motion.div

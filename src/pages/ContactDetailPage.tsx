@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,10 @@ import {
   Star,
   Clock,
   Layers,
+  Sparkles,
+  RefreshCw,
+  ShieldOff,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { staggerContainerVariants, staggerItemVariants } from "@/lib/transitions";
@@ -188,12 +192,92 @@ function MessageBubble({
   );
 }
 
+function AiSummarySection({
+  aiSummary,
+  conversationId,
+}: {
+  aiSummary?: string;
+  conversationId?: Id<"conversations">;
+}) {
+  const generateSummary = useAction(api.ai.generateAiSummary);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerate = useCallback(async () => {
+    if (!conversationId) return;
+    setIsGenerating(true);
+    try {
+      await generateSummary({ conversationId });
+      toast.success("AI summary generated");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to generate summary",
+      );
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [generateSummary, conversationId]);
+
+  // No conversation linked — nothing to summarize
+  if (!conversationId) return null;
+
+  return (
+    <div className="mt-4">
+      {aiSummary ? (
+        <div className="p-3 bg-violet-500/5 rounded-lg border border-violet-500/20">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+              <span className="text-xs font-medium text-violet-400">
+                AI Summary
+              </span>
+            </div>
+            <button
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="inline-flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 disabled:opacity-50 transition-colors"
+              title="Regenerate summary"
+            >
+              {isGenerating ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <RefreshCw className="w-3 h-3" />
+              )}
+              Regenerate
+            </button>
+          </div>
+          <p className="text-sm text-zinc-300 leading-relaxed">{aiSummary}</p>
+        </div>
+      ) : (
+        <button
+          onClick={handleGenerate}
+          disabled={isGenerating}
+          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-lg hover:bg-violet-500/20 disabled:opacity-50 transition-colors"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Generating summary...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              Generate AI Summary
+            </>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
   const detail = useQuery(
     api.contacts.getDetail,
     id ? { contactId: id as Id<"contacts"> } : "skip",
   );
+  const blockContact = useMutation(api.contacts.block);
+  const unblockContact = useMutation(api.contacts.unblock);
 
   if (!id) {
     return (
@@ -261,9 +345,16 @@ export function ContactDetailPage() {
                 <User className="w-7 h-7 text-zinc-400" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-zinc-100">
-                  {name || "Unknown"}
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg font-semibold text-zinc-100">
+                    {name || "Unknown"}
+                  </h1>
+                  {contact.isBlocked && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-1.5 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded">
+                      Blocked
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1.5 text-sm text-zinc-400">
                   <Phone className="w-3.5 h-3.5" />
                   {contact.phone}
@@ -271,17 +362,80 @@ export function ContactDetailPage() {
               </div>
             </div>
 
-            {/* Stats row */}
-            <div className="grid grid-cols-2 gap-3 mb-5">
-              <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <Star className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="text-xs text-zinc-500">Engagement</span>
+            {/* Engagement meter */}
+            {(() => {
+              const score = contact.engagementScore;
+              const hasScore = score !== undefined && score !== null;
+              const barColor =
+                !hasScore
+                  ? "bg-zinc-600"
+                  : score >= 75
+                    ? "bg-blue-500"
+                    : score >= 50
+                      ? "bg-emerald-500"
+                      : score >= 25
+                        ? "bg-amber-500"
+                        : "bg-red-500";
+              const labelColor =
+                !hasScore
+                  ? "text-zinc-500"
+                  : score >= 75
+                    ? "text-blue-400"
+                    : score >= 50
+                      ? "text-emerald-400"
+                      : score >= 25
+                        ? "text-amber-400"
+                        : "text-red-400";
+              const label =
+                !hasScore
+                  ? "No data"
+                  : score >= 75
+                    ? "High"
+                    : score >= 50
+                      ? "Good"
+                      : score >= 25
+                        ? "Low"
+                        : "Very Low";
+              return (
+                <div className="mb-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <Star className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-xs text-zinc-500">
+                        Engagement Score
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={cn("text-xs font-medium", labelColor)}>
+                        {label}
+                      </span>
+                      <span className="text-lg font-bold text-zinc-100">
+                        {hasScore ? score : "—"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        barColor,
+                      )}
+                      style={{ width: hasScore ? `${score}%` : "0%" }}
+                    />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-[10px] text-zinc-600">0</span>
+                    <span className="text-[10px] text-zinc-600">25</span>
+                    <span className="text-[10px] text-zinc-600">50</span>
+                    <span className="text-[10px] text-zinc-600">75</span>
+                    <span className="text-[10px] text-zinc-600">100</span>
+                  </div>
                 </div>
-                <p className="text-lg font-bold text-zinc-100">
-                  {contact.engagementScore ?? "—"}
-                </p>
-              </div>
+              );
+            })()}
+
+            {/* Stats row */}
+            <div className="grid grid-cols-1 gap-3 mb-5">
               <div className="bg-zinc-800/50 rounded-lg p-3 text-center">
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Clock className="w-3.5 h-3.5 text-blue-400" />
@@ -344,8 +498,8 @@ export function ContactDetailPage() {
             )}
 
             {/* Quick actions */}
-            {conversation && (
-              <div className="mt-5 pt-4 border-t border-zinc-800">
+            <div className="mt-5 pt-4 border-t border-zinc-800 space-y-2">
+              {conversation && (
                 <Link
                   to={`/inbox/${conversation._id}`}
                   className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 rounded-lg hover:bg-emerald-600/20 transition-colors"
@@ -353,18 +507,49 @@ export function ContactDetailPage() {
                   <Inbox className="w-4 h-4" />
                   Open in Inbox
                 </Link>
-              </div>
-            )}
+              )}
+              <button
+                onClick={async () => {
+                  try {
+                    if (contact.isBlocked) {
+                      await unblockContact({ contactId: contact._id });
+                      toast.success("Contact unblocked");
+                    } else {
+                      await blockContact({ contactId: contact._id });
+                      toast.success("Contact blocked");
+                    }
+                  } catch (err) {
+                    toast.error(
+                      err instanceof Error ? err.message : "Failed to update block status",
+                    );
+                  }
+                }}
+                className={cn(
+                  "flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium rounded-lg transition-colors",
+                  contact.isBlocked
+                    ? "bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700"
+                    : "bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20",
+                )}
+              >
+                {contact.isBlocked ? (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    Unblock Contact
+                  </>
+                ) : (
+                  <>
+                    <ShieldOff className="w-4 h-4" />
+                    Block Contact
+                  </>
+                )}
+              </button>
+            </div>
 
             {/* AI Summary */}
-            {contact.aiSummary && (
-              <div className="mt-4 p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50">
-                <p className="text-xs font-medium text-zinc-500 mb-1">
-                  AI Summary
-                </p>
-                <p className="text-sm text-zinc-300">{contact.aiSummary}</p>
-              </div>
-            )}
+            <AiSummarySection
+              aiSummary={contact.aiSummary}
+              conversationId={conversation?._id}
+            />
           </div>
         </motion.div>
 
