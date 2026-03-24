@@ -410,9 +410,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </nav>
         )}
 
-        <main 
+        <main
           className={cn(
             "min-h-[calc(100vh-56px)] md:min-h-screen",
+            isAuthenticated && "px-4 py-6 sm:px-6 lg:px-8",
             !isAuthenticated && "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
           )}
         >
