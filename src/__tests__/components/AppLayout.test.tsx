@@ -28,7 +28,7 @@ describe("AppLayout", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("Message Hub")).toBeInTheDocument();
+    expect(screen.getByText("OfferBlast")).toBeInTheDocument();
   });
 
   it("renders children", () => {
@@ -98,7 +98,7 @@ describe("AppLayout", () => {
     expect(screen.queryByRole("button", { name: /log\s?out|sign\s?out/i })).not.toBeInTheDocument();
   });
 
-  it("shows Dashboard and Contacts nav links when authenticated", () => {
+  it("shows Dashboard and Leads nav links when authenticated", () => {
     mockUseConvexAuth.mockReturnValue({ isAuthenticated: true, isLoading: false });
 
     render(
@@ -110,7 +110,7 @@ describe("AppLayout", () => {
     );
 
     expect(screen.getByRole("link", { name: /dashboard/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /contacts/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /leads/i })).toBeInTheDocument();
   });
 
   it("hides nav links when not authenticated", () => {
@@ -124,7 +124,7 @@ describe("AppLayout", () => {
       </MemoryRouter>
     );
 
-    expect(screen.queryByRole("link", { name: /contacts/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /leads/i })).not.toBeInTheDocument();
   });
 
   it("renders sidebar with nav items when authenticated", () => {
@@ -138,7 +138,6 @@ describe("AppLayout", () => {
       </MemoryRouter>
     );
 
-    // Sidebar should include nav items
     expect(screen.getByRole("link", { name: /inbox/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /campaigns/i })).toBeInTheDocument();
   });
@@ -154,7 +153,6 @@ describe("AppLayout", () => {
       </MemoryRouter>
     );
 
-    // Should not have sidebar nav items
     expect(screen.queryByRole("link", { name: /inbox/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /campaigns/i })).not.toBeInTheDocument();
   });
@@ -173,7 +171,7 @@ describe("AppLayout", () => {
     expect(screen.getByText("Collapse")).toBeInTheDocument();
   });
 
-  it("renders Send nav link when authenticated", () => {
+  it("renders Offers nav link when authenticated", () => {
     mockUseConvexAuth.mockReturnValue({ isAuthenticated: true, isLoading: false });
 
     render(
@@ -184,6 +182,6 @@ describe("AppLayout", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole("link", { name: /send/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /offers/i })).toBeInTheDocument();
   });
 });

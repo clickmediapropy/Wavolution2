@@ -102,10 +102,18 @@ const schema = defineSchema({
     aiSummary: v.optional(v.string()), // AI-generated contact summary
     aiSummaryGeneratedAt: v.optional(v.number()),
     isBlocked: v.optional(v.boolean()), // blocked contacts are excluded from webhook processing
+    // Affiliate pivot fields
+    vertical: v.optional(v.string()), // primary vertical slug
+    verticalId: v.optional(v.id("verticals")), // FK to verticals table
+    revenue: v.optional(v.number()), // total revenue from Voluum
+    conversionCount: v.optional(v.number()), // number of conversions
+    source: v.optional(v.string()), // "voluum" | "manual" | "csv"
+    lastOfferId: v.optional(v.id("offers")), // last offer they converted on
   })
     .index("by_userId", ["userId"])
     .index("by_userId_and_phone", ["userId", "phone"])
     .index("by_userId_and_pipelineStageId", ["userId", "pipelineStageId"])
+    .index("by_userId_and_vertical", ["userId", "vertical"])
     .searchIndex("search_by_firstName", {
       searchField: "firstName",
       filterFields: ["userId"],
@@ -163,9 +171,126 @@ const schema = defineSchema({
     startedAt: v.optional(v.number()),
     completedAt: v.optional(v.number()),
     scheduledAt: v.optional(v.number()), // timestamp for scheduled send
+    // Affiliate pivot fields
+    offerId: v.optional(v.id("offers")), // linked offer
+    verticalId: v.optional(v.id("verticals")), // target vertical
   })
     .index("by_userId", ["userId"])
     .index("by_status_and_scheduledAt", ["status", "scheduledAt"]),
+
+  // Verticals — categorization of leads/offers by niche
+  verticals: defineTable({
+    userId: v.id("users"),
+    name: v.string(), // "GLP-1 / Ozempic", "Finance", "Tech"
+    slug: v.string(), // "glp1", "finance", "tech"
+    description: v.optional(v.string()),
+    color: v.string(), // hex color for UI badges
+    offerCount: v.optional(v.number()), // denormalized count
+    leadCount: v.optional(v.number()), // denormalized count
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_slug", ["userId", "slug"]),
+
+  // Offers — affiliate offers linked to verticals
+  offers: defineTable({
+    userId: v.id("users"),
+    verticalId: v.id("verticals"),
+    name: v.string(), // "Medvi CPM Andy - GLP1"
+    affiliateNetwork: v.string(), // "Pureads", "RemedyMeds"
+    url: v.optional(v.string()), // offer/landing page URL
+    status: v.string(), // active | paused | archived
+    revenue: v.optional(v.number()), // total revenue from Voluum
+    conversionCount: v.optional(v.number()),
+    notes: v.optional(v.string()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_verticalId", ["userId", "verticalId"])
+    .index("by_userId_and_status", ["userId", "status"]),
+
+  // Affiliate links — tracked links for offers
+  affiliateLinks: defineTable({
+    userId: v.id("users"),
+    offerId: v.optional(v.id("offers")),
+    name: v.string(), // "Medvi GLP1 - Landing A"
+    originalUrl: v.string(), // full affiliate URL with params
+    affiliateNetwork: v.optional(v.string()),
+    verticalId: v.optional(v.id("verticals")),
+    clickCount: v.optional(v.number()), // denormalized
+    conversionCount: v.optional(v.number()),
+    revenue: v.optional(v.number()),
+    status: v.string(), // active | paused | archived
+    tags: v.optional(v.array(v.string())),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_offerId", ["userId", "offerId"])
+    .index("by_userId_and_status", ["userId", "status"]),
+
+  // Shortlinks — shortened redirect URLs for affiliate links
+  shortlinks: defineTable({
+    userId: v.id("users"),
+    affiliateLinkId: v.id("affiliateLinks"),
+    domainId: v.optional(v.id("domains")), // custom domain if any
+    slug: v.string(), // random 6-char code e.g. "abc123"
+    fullUrl: v.string(), // constructed: https://domain.com/abc123
+    targetUrl: v.string(), // the affiliate URL it redirects to
+    clickCount: v.number(), // incremented on each click
+    lastClickedAt: v.optional(v.number()),
+    isActive: v.boolean(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_userId", ["userId"])
+    .index("by_affiliateLinkId", ["affiliateLinkId"]),
+
+  // Domains — custom redirect domains
+  domains: defineTable({
+    userId: v.id("users"),
+    domain: v.string(), // e.g. "go.myoffers.com"
+    provider: v.string(), // "cloudflare" | "namecheap" | "manual"
+    cloudflareZoneId: v.optional(v.string()),
+    nameservers: v.optional(v.array(v.string())),
+    sslStatus: v.optional(v.string()), // active | pending | inactive
+    isVerified: v.boolean(),
+    status: v.string(), // active | pending | inactive
+  })
+    .index("by_userId", ["userId"])
+    .index("by_domain", ["domain"]),
+
+  // Postbacks — received conversion postbacks from affiliate networks
+  postbacks: defineTable({
+    userId: v.id("users"),
+    offerId: v.optional(v.id("offers")),
+    affiliateLinkId: v.optional(v.id("affiliateLinks")),
+    clickId: v.optional(v.string()),
+    transactionId: v.optional(v.string()),
+    payout: v.optional(v.number()),
+    status: v.string(), // received | validated | rejected
+    source: v.optional(v.string()), // "voluum" | "pureads" | "direct"
+    phone: v.optional(v.string()),
+    ip: v.optional(v.string()),
+    rawParams: v.optional(v.string()), // JSON stringified raw query params
+    receivedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_offerId", ["userId", "offerId"])
+    .index("by_clickId", ["clickId"])
+    .index("by_receivedAt", ["receivedAt"]),
+
+  // Postback configs — per-offer postback URL configurations
+  postbackConfigs: defineTable({
+    userId: v.id("users"),
+    name: v.string(), // "Pureads GLP1 Postback"
+    offerId: v.optional(v.id("offers")),
+    secretToken: v.string(), // validation token
+    paramMapping: v.object({
+      clickId: v.string(),
+      payout: v.string(),
+      transactionId: v.string(),
+      status: v.optional(v.string()),
+    }),
+    isActive: v.boolean(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_secretToken", ["secretToken"]),
 
   // --- NEW TABLES ---
 

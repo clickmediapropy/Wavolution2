@@ -20,33 +20,44 @@ vi.mock("react-countup", () => ({
   },
 }));
 
+const mockDashboardStats = {
+  deliveryRate: 95.5, openRate: 72.3, failureRate: 4.5,
+  avgResponseMinutes: 45, totalSent: 100, totalDelivered: 95,
+  totalRead: 72, totalFailed: 5, totalIncoming: 30,
+};
+
 describe("DashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // DashboardPage calls useQuery 11 times:
-    // 1. contacts.count, 2. contacts.countThisWeek, 3. messages.count,
-    // 4. messages.countToday, 5. campaigns.listByUser, 6. instances.count,
-    // 7. messages.dashboardStats, 8. messages.dailyCounts,
-    // 9. messages.contactDailyCounts, 10. messages.successRate,
-    // 11. instances.lastDisconnection
+    // DashboardPage (9 queries) + OnboardingProgress child (4 queries) = 13 useQuery calls
+    // Order:
+    // 0: contacts.count → 42
+    // 1: contacts.countThisWeek → 5
+    // 2: campaigns.listByUser → [{ _id: "camp1", status: "running" }]
+    // 3: instances.count → { total: 3, connected: 2 }
+    // 4: offers.stats → {}
+    // 5: verticals.list → []
+    // 6: messages.dashboardStats → stats object
+    // 7: messages.dailyCounts → []
+    // 8: messages.contactDailyCounts → []
+    // 9: instances.count (OnboardingProgress) → { total: 3, connected: 2 }
+    // 10: contacts.count (OnboardingProgress) → 42
+    // 11: campaigns.listByUser (OnboardingProgress) → [...]
+    // 12: instances.list (OnboardingProgress) → [{ _id: "i1", whatsappConnected: true }]
     let callIndex = 0;
     mockUseQuery.mockImplementation(() => {
-      const i = callIndex++;
-      if (i === 0) return 42;                                         // contacts.count
-      if (i === 1) return 5;                                          // contacts.countThisWeek
-      if (i === 2) return 15;                                         // messages.count
-      if (i === 3) return 3;                                          // messages.countToday
-      if (i === 4) return [{ _id: "camp1", status: "running" }];     // campaigns.listByUser
-      if (i === 5) return { total: 3, connected: 2 };                // instances.count
-      if (i === 6) return {                                           // messages.dashboardStats
-        deliveryRate: 95.5, openRate: 72.3, failureRate: 4.5,
-        avgResponseMinutes: 45, totalSent: 100, totalDelivered: 95,
-        totalRead: 72, totalFailed: 5, totalIncoming: 30,
-      };
-      if (i === 7) return [1, 3, 5, 2, 4, 6, 3];                    // messages.dailyCounts
-      if (i === 8) return [2, 1, 3, 0, 1, 4, 2];                    // messages.contactDailyCounts
-      if (i === 9) return 96;                                         // messages.successRate
-      if (i === 10) return null;                                      // instances.lastDisconnection
+      const i = callIndex % 13;
+      callIndex++;
+      if (i === 0 || i === 10) return 42; // contacts.count
+      if (i === 1) return 5; // contacts.countThisWeek
+      if (i === 2 || i === 11) return [{ _id: "camp1", status: "running" }]; // campaigns.listByUser
+      if (i === 3 || i === 9) return { total: 3, connected: 2 }; // instances.count
+      if (i === 4) return { totalActive: 1, totalInactive: 0, totalLive: 1, totalRevenue: 0, totalConversions: 0 }; // offers.stats
+      if (i === 5) return []; // verticals.list
+      if (i === 6) return mockDashboardStats; // messages.dashboardStats
+      if (i === 7) return [1, 3, 5, 2, 4, 6, 3]; // messages.dailyCounts
+      if (i === 8) return [2, 1, 3, 0, 1, 4, 2]; // messages.contactDailyCounts
+      if (i === 12) return [{ _id: "i1", whatsappConnected: true, connectionStatus: "open" }]; // instances.list
       return null;
     });
     mockUsePaginatedQuery.mockReturnValue({
@@ -76,8 +87,7 @@ describe("DashboardPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("WhatsApp")).toBeInTheDocument();
-    expect(screen.getByText("Connected")).toBeInTheDocument();
+    expect(screen.getByText("All systems operational")).toBeInTheDocument();
   });
 
   it("renders quick actions with links", () => {
@@ -90,7 +100,6 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Quick Actions")).toBeInTheDocument();
     expect(screen.getAllByText("Send Message").length).toBeGreaterThan(0);
     expect(screen.getByText("New Campaign")).toBeInTheDocument();
-    expect(screen.getByText("Manage Contacts")).toBeInTheDocument();
   });
 
   it("renders recent messages section", () => {
@@ -110,9 +119,9 @@ describe("DashboardPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Total Contacts")).toBeInTheDocument();
-    expect(screen.getByText("Messages Sent")).toBeInTheDocument();
-    expect(screen.getByText("Active Campaigns")).toBeInTheDocument();
+    expect(screen.getByText("Total Leads")).toBeInTheDocument();
+    expect(screen.getByText("Total Revenue")).toBeInTheDocument();
+    expect(screen.getByText("Active Offers")).toBeInTheDocument();
   });
 
   it("renders real Quick Stats data", () => {

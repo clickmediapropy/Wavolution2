@@ -50,7 +50,15 @@ describe("BotConfigPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseQuery.mockReturnValue(mockInstances);
+    // BotConfigPage calls useQuery 3 times per instance card cycle:
+    // 1st call: instances.list (parent component)
+    // then per card: knowledgeBase.list, botGoals.list
+    let callIndex = 0;
+    mockUseQuery.mockImplementation(() => {
+      const i = callIndex++;
+      if (i === 0) return mockInstances; // instances.list
+      return []; // knowledgeBase.list and botGoals.list return empty
+    });
     mockUseMutation.mockReturnValue(mockMutationFn);
     mockMutationFn.mockResolvedValue(undefined);
   });
@@ -106,30 +114,14 @@ describe("BotConfigPage", () => {
     expect(textareas[0]).toHaveValue("You are a helpful assistant.");
   });
 
-  it("renders goals section with coming soon label", () => {
+  it("renders goals section heading", () => {
     renderBotConfig();
-    const comingSoonLabels = screen.getAllByText("Coming soon");
-    expect(comingSoonLabels.length).toBeGreaterThanOrEqual(2); // one per instance card
-    const goalsHeadings = screen.getAllByText("Goals");
-    expect(goalsHeadings.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/goals/i).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders knowledge base section with coming soon label", () => {
+  it("renders knowledge base section heading", () => {
     renderBotConfig();
-    const kbHeadings = screen.getAllByText("Knowledge Base");
-    expect(kbHeadings.length).toBeGreaterThanOrEqual(1);
-    const uploadTexts = screen.getAllByText(/upload documents and text content/i);
-    expect(uploadTexts.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("renders goal names in the goals section", () => {
-    renderBotConfig();
-    // Each instance card has the same goal list, so use getAllByText
-    expect(screen.getAllByText("Human Handover").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Auto Follow-up").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Manage Tags").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Update Lead Score").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Send Notification").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/knowledge base/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it("calls toggle mutation when bot toggle is clicked", async () => {
@@ -152,7 +144,7 @@ describe("BotConfigPage", () => {
   });
 
   it("shows empty state when no instances", () => {
-    mockUseQuery.mockReturnValue([]);
+    mockUseQuery.mockImplementation(() => []);
     renderBotConfig();
     expect(
       screen.getByRole("heading", { name: /no instances yet/i }),
@@ -164,7 +156,7 @@ describe("BotConfigPage", () => {
   });
 
   it("shows loading spinner when data is undefined", () => {
-    mockUseQuery.mockReturnValue(undefined);
+    mockUseQuery.mockImplementation(() => undefined);
     renderBotConfig();
     // The Loader2 component renders as an SVG with animate-spin class
     const spinner = document.querySelector(".animate-spin");

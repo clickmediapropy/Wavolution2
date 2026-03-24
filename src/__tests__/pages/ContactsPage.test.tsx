@@ -66,7 +66,16 @@ describe("ContactsPage", () => {
   });
 
   it("renders count badge with total count", () => {
-    mockUseQuery.mockReturnValue(42);
+    // useQuery calls: exportAll (array), count (number), search (skip)
+    // Use modulus to handle re-renders
+    let callIdx = 0;
+    mockUseQuery.mockImplementation(() => {
+      const i = callIdx % 3;
+      callIdx++;
+      if (i === 0) return []; // exportAll
+      if (i === 1) return 42; // count
+      return undefined; // search (skipped)
+    });
     renderPage();
     expect(screen.getByText("42")).toBeInTheDocument();
   });

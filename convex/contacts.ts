@@ -724,8 +724,8 @@ export const mergeContacts = mutation({
 
     // Merge custom fields (keep's values win on conflict)
     const mergedCustomFields = {
-      ...(remove.customFields ?? {}),
-      ...(keep.customFields ?? {}),
+      ...remove.customFields,
+      ...keep.customFields,
     };
 
     // Pick best values

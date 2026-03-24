@@ -1,15 +1,19 @@
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { LayoutDashboard, Users, MessageSquare, Megaphone, Zap } from "lucide-react";
+import { LayoutDashboard, Users, DollarSign, Tag, Megaphone, Zap, Layers } from "lucide-react";
 import { motion } from "framer-motion";
 import { StatsCard } from "@/components/StatsCard";
-import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { RecentMessages } from "@/components/RecentMessages";
 import { QuickActions } from "@/components/QuickActions";
 import { OnboardingProgress } from "@/components/OnboardingProgress";
 import { staggerContainerVariants, staggerItemVariants } from "@/lib/transitions";
 
 const EMPTY_SPARKLINE: number[] = [0, 0, 0, 0, 0, 0, 0];
+
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
 
 function formatResponseTime(minutes: number | null): string {
   if (minutes === null) return "—";
@@ -23,35 +27,25 @@ function formatResponseTime(minutes: number | null): string {
 export function DashboardPage(): React.ReactElement {
   const contactCount = useQuery(api.contacts.count);
   const contactsThisWeek = useQuery(api.contacts.countThisWeek);
-  const messageCount = useQuery(api.messages.count);
-  const messagesToday = useQuery(api.messages.countToday);
   const campaigns = useQuery(api.campaigns.listByUser);
   const instanceCounts = useQuery(api.instances.count);
+  const offerStats = useQuery(api.offers.stats);
+  const verticals = useQuery(api.verticals.list);
 
   const dashboardStats = useQuery(api.messages.dashboardStats);
   const messageDailyCounts = useQuery(api.messages.dailyCounts);
   const contactDailyCounts = useQuery(api.messages.contactDailyCounts);
-  const msgSuccessRate = useQuery(api.messages.successRate);
-  const lastDisconnection = useQuery(api.instances.lastDisconnection);
 
   const campaignCount = campaigns?.length ?? 0;
-  const activeCampaigns = campaigns?.filter(c => c.status === "running" || c.status === "paused").length ?? 0;
   const connected = (instanceCounts?.connected ?? 0) > 0;
 
   const contactSparkline = contactDailyCounts ?? EMPTY_SPARKLINE;
   const messageSparkline = messageDailyCounts ?? EMPTY_SPARKLINE;
-  const campaignSparkline = messageSparkline.map((v) => Math.round(v / 10));
 
   const hasNewContacts = contactsThisWeek !== undefined && contactCount !== undefined && contactsThisWeek > 0;
   const contactTrend = hasNewContacts ? "up" as const : "neutral" as const;
   const contactTrendValue = contactsThisWeek !== undefined
     ? `+${contactsThisWeek} this week`
-    : undefined;
-
-  const hasNewMessages = messagesToday !== undefined && messagesToday > 0;
-  const messageTrend = hasNewMessages ? "up" as const : "neutral" as const;
-  const messageTrendValue = messagesToday !== undefined
-    ? `+${messagesToday} today`
     : undefined;
 
   return (
@@ -69,7 +63,7 @@ export function DashboardPage(): React.ReactElement {
           </div>
           <div>
             <h1 className="text-h2 text-zinc-100">Dashboard</h1>
-            <p className="text-small text-zinc-500">Welcome back! Here&apos;s what&apos;s happening today.</p>
+            <p className="text-small text-zinc-500">Your affiliate performance at a glance.</p>
           </div>
         </div>
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full">
@@ -86,18 +80,10 @@ export function DashboardPage(): React.ReactElement {
         variants={staggerItemVariants}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        <ConnectionStatus
-          connected={connected}
-          href="/whatsapp"
-          sparklineData={messageSparkline}
-          successRate={msgSuccessRate ?? 100}
-          lastDisconnectedAt={lastDisconnection}
-        />
-
         <StatsCard
           icon={<Users className="w-5 h-5 text-blue-400" />}
           iconBg="bg-blue-500/10"
-          label="Total Contacts"
+          label="Total Leads"
           value={contactCount ?? "..."}
           subtitle={contactsThisWeek !== undefined ? `+${contactsThisWeek} this week` : undefined}
           subtitleColor="text-blue-400/70"
@@ -108,31 +94,73 @@ export function DashboardPage(): React.ReactElement {
         />
 
         <StatsCard
-          icon={<MessageSquare className="w-5 h-5 text-violet-400" />}
-          iconBg="bg-violet-500/10"
-          label="Messages Sent"
-          value={messageCount ?? "..."}
-          subtitle={messagesToday !== undefined ? `+${messagesToday} today` : undefined}
-          subtitleColor="text-violet-400/70"
-          trend={messageTrend}
-          trendValue={messageTrendValue}
+          icon={<DollarSign className="w-5 h-5 text-emerald-400" />}
+          iconBg="bg-emerald-500/10"
+          label="Total Revenue"
+          value={offerStats ? currencyFormatter.format(offerStats.totalRevenue) : "..."}
+          subtitle={offerStats ? `${offerStats.totalConversions} conversions` : undefined}
+          subtitleColor="text-emerald-400/70"
+          trend={offerStats && offerStats.totalRevenue > 0 ? "up" : "neutral"}
           sparklineData={messageSparkline}
-          sparklineColor="violet"
+          sparklineColor="emerald"
+        />
+
+        <StatsCard
+          icon={<Tag className="w-5 h-5 text-violet-400" />}
+          iconBg="bg-violet-500/10"
+          label="Active Offers"
+          value={offerStats?.activeOffers ?? "..."}
+          subtitle={offerStats ? `${offerStats.totalOffers} total` : undefined}
+          subtitleColor="text-violet-400/70"
+          trend={offerStats && offerStats.activeOffers > 0 ? "up" : "neutral"}
         />
 
         <StatsCard
           icon={<Megaphone className="w-5 h-5 text-amber-400" />}
           iconBg="bg-amber-500/10"
-          label="Active Campaigns"
-          value={activeCampaigns}
+          label="Campaigns Sent"
+          value={campaignCount}
           subtitle={campaignCount > 0 ? `${campaignCount} total` : "No campaigns yet"}
           subtitleColor="text-amber-400/70"
-          trend={activeCampaigns > 0 ? "up" : "neutral"}
-          trendValue={activeCampaigns > 0 ? `${activeCampaigns} running` : undefined}
-          sparklineData={campaignSparkline}
-          sparklineColor="amber"
+          trend={campaignCount > 0 ? "up" : "neutral"}
         />
       </motion.div>
+
+      {/* Leads by Vertical */}
+      {verticals && verticals.length > 0 && (
+        <motion.div
+          variants={staggerItemVariants}
+          className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-violet-500/10 rounded-lg">
+              <Layers className="w-5 h-5 text-violet-400" />
+            </div>
+            <div>
+              <h3 className="text-h3 text-zinc-100">Leads by Vertical</h3>
+              <p className="text-small text-zinc-500">Distribution of leads across your verticals</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {verticals.map((v) => (
+              <div
+                key={v._id}
+                className="flex items-center gap-3 p-4 bg-zinc-800/30 rounded-xl"
+              >
+                <div
+                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: v.color }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-zinc-200 truncate">{v.name}</p>
+                  <p className="text-xs text-zinc-500">{v.leadCount ?? 0} leads</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Bottom row */}
       <motion.div
@@ -157,7 +185,7 @@ export function DashboardPage(): React.ReactElement {
             <Zap className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <h3 className="text-h3 text-zinc-100">Quick Stats</h3>
+            <h3 className="text-h3 text-zinc-100">Recent Offer Blasts</h3>
             <p className="text-small text-zinc-500">Performance overview based on your message history</p>
           </div>
         </div>

@@ -9,17 +9,21 @@ import {
   LayoutDashboard,
   Users,
   Megaphone,
-  Send,
   Smartphone,
-  Bot,
   Inbox,
-  Kanban,
   Menu,
   X,
   ChevronLeft,
   ChevronRight,
   Settings,
-  Activity,
+  Tag,
+  Layers,
+  Upload,
+  Link2,
+  Globe,
+  ArrowDownToLine,
+  Sparkles,
+  Phone,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
@@ -30,14 +34,18 @@ import { PwaInstallBanner } from "@/components/PwaInstallBanner";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/inbox", label: "Inbox", icon: Inbox },
-  { to: "/contacts", label: "Contacts", icon: Users },
-  { to: "/pipeline", label: "Pipeline", icon: Kanban },
+  { to: "/leads", label: "Leads", icon: Users },
+  { to: "/offers", label: "Offers", icon: Tag },
+  { to: "/verticals", label: "Verticals", icon: Layers },
+  { to: "/links", label: "Links", icon: Link2 },
+  { to: "/domains", label: "Domains", icon: Globe },
   { to: "/campaigns", label: "Campaigns", icon: Megaphone },
-  { to: "/send", label: "Send Message", icon: Send },
-  { to: "/bots", label: "Bots", icon: Bot },
+  { to: "/postbacks", label: "Postbacks", icon: ArrowDownToLine },
+  { to: "/templates/generate", label: "AI Templates", icon: Sparkles },
+  { to: "/import", label: "Import", icon: Upload },
+  { to: "/inbox", label: "Inbox", icon: Inbox },
+  { to: "/phone-numbers", label: "Numbers", icon: Phone },
   { to: "/whatsapp", label: "WhatsApp", icon: Smartphone },
-  { to: "/activity", label: "Activity", icon: Activity },
 ] as const;
 
 const sidebarSpring = { type: "spring", stiffness: 300, damping: 30 } as const;
@@ -100,7 +108,7 @@ function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 exit={{ opacity: 0, x: -10 }}
                 className="text-lg font-bold text-text-primary whitespace-nowrap"
               >
-                Message Hub
+                OfferBlast
               </motion.span>
             )}
           </AnimatePresence>
@@ -358,7 +366,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <div className="flex items-center justify-between h-14 px-4">
               <Link to="/dashboard" className="flex items-center gap-2">
                 <LogoIcon />
-                <span className="font-bold text-text-primary">Message Hub</span>
+                <span className="font-bold text-text-primary">OfferBlast</span>
               </Link>
               <button
                 onClick={() => setMobileMenuOpen(true)}
@@ -380,7 +388,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   className="flex items-center gap-3 text-xl font-bold text-text-primary hover:text-emerald-400 transition-colors"
                 >
                   <LogoIcon />
-                  <span>Message Hub</span>
+                  <span>OfferBlast</span>
                 </Link>
                 
                 <div className="flex items-center gap-4">

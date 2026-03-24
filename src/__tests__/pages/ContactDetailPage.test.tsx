@@ -9,6 +9,7 @@ const mockUseMutation = vi.fn();
 vi.mock("convex/react", () => ({
   useQuery: (...args: unknown[]) => mockUseQuery(...args),
   useMutation: () => mockUseMutation(),
+  useAction: () => vi.fn(),
 }));
 
 const mockDetail = {
@@ -166,7 +167,7 @@ describe("ContactDetailPage", () => {
 
   it("renders engagement score", () => {
     renderContactDetail();
-    expect(screen.getByText("Engagement")).toBeInTheDocument();
+    expect(screen.getByText("Engagement Score")).toBeInTheDocument();
     expect(screen.getByText("72")).toBeInTheDocument();
   });
 

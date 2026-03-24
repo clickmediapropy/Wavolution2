@@ -21,8 +21,8 @@ describe("LandingPage", () => {
       </MemoryRouter>,
     );
 
-    const getStartedLink = screen.getByText("Get Started Free");
-    expect(getStartedLink.closest("a")).toHaveAttribute("href", "/register");
+    const getStartedLinks = screen.getAllByText("Get Started Free");
+    expect(getStartedLinks[0].closest("a")).toHaveAttribute("href", "/register");
   });
 
   it("renders Watch Demo link to login", () => {
@@ -44,7 +44,7 @@ describe("LandingPage", () => {
     );
 
     expect(screen.getByText("Contact Management")).toBeInTheDocument();
-    expect(screen.getByText("Direct Messaging")).toBeInTheDocument();
-    expect(screen.getByText("Bulk Campaigns")).toBeInTheDocument();
+    expect(screen.getByText("Bulk Messaging")).toBeInTheDocument();
+    expect(screen.getByText("Real-time Analytics")).toBeInTheDocument();
   });
 });

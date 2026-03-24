@@ -36,6 +36,14 @@ import { AutoFollowupPage } from "./pages/AutoFollowupPage";
 import { APIDocsPage } from "./pages/APIDocsPage";
 import { ContactMergePage } from "./pages/ContactMergePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { OffersPage } from "./pages/OffersPage";
+import { VerticalsPage } from "./pages/VerticalsPage";
+import { LeadImportPage } from "./pages/LeadImportPage";
+import { LinksPage } from "./pages/LinksPage";
+import { DomainsPage } from "./pages/DomainsPage";
+import { PostbacksPage } from "./pages/PostbacksPage";
+import { TemplateGeneratorPage } from "./pages/TemplateGeneratorPage";
+import { PhoneNumbersPage } from "./pages/PhoneNumbersPage";
 import { WhatsAppGuard } from "./components/WhatsAppGuard";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -124,6 +132,78 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <ContactMergePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/leads"
+                element={
+                  <ProtectedRoute>
+                    <ContactsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/offers"
+                element={
+                  <ProtectedRoute>
+                    <OffersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/verticals"
+                element={
+                  <ProtectedRoute>
+                    <VerticalsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/import"
+                element={
+                  <ProtectedRoute>
+                    <LeadImportPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/links"
+                element={
+                  <ProtectedRoute>
+                    <LinksPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/domains"
+                element={
+                  <ProtectedRoute>
+                    <DomainsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/postbacks"
+                element={
+                  <ProtectedRoute>
+                    <PostbacksPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/templates/generate"
+                element={
+                  <ProtectedRoute>
+                    <TemplateGeneratorPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/phone-numbers"
+                element={
+                  <ProtectedRoute>
+                    <PhoneNumbersPage />
                   </ProtectedRoute>
                 }
               />

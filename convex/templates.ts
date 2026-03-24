@@ -2,7 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
-const CATEGORIES = ["Greeting", "Follow-up", "Promotion", "Support"] as const;
+const _CATEGORIES = ["Greeting", "Follow-up", "Promotion", "Support"] as const;
 
 /** Extract {{variable}} placeholders from a template string. */
 function extractVariables(content: string): string[] {

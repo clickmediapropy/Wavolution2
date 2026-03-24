@@ -87,19 +87,24 @@ function renderInbox(path = "/inbox") {
 describe("InboxPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // InboxPage calls useQuery multiple times:
-    // 1. conversations.list → array of conversations
-    // 2. conversations.get → skip (no conversationId selected)
-    // 3. conversations.getMessages → skip (no conversationId selected)
-    // 4. quickReplies.list → quick replies
-    let callIndex = 0;
-    mockUseQuery.mockImplementation((_ref: unknown, args: unknown) => {
-      const i = callIndex % 4;
-      callIndex++;
-      if (i === 0) return mockConversations; // conversations.list
-      if (args === "skip") return undefined; // skipped queries
-      if (i === 3) return []; // quickReplies.list
-      return undefined;
+    // Return safe defaults based on the second argument pattern:
+    // - { archived: false } → active conversations
+    // - { archived: true } or "skip" → archived/skipped
+    // - no second arg or {} → empty array (quickReplies, exportAll)
+    mockUseQuery.mockImplementation((_ref: unknown, args?: unknown) => {
+      if (args === "skip") return undefined;
+      if (typeof args === "object" && args !== null && "archived" in (args as Record<string, unknown>)) {
+        const a = args as { archived: boolean };
+        return a.archived ? [] : mockConversations;
+      }
+      if (typeof args === "object" && args !== null && "id" in (args as Record<string, unknown>)) {
+        return undefined; // conversations.get
+      }
+      if (typeof args === "object" && args !== null && "conversationId" in (args as Record<string, unknown>)) {
+        return undefined; // conversations.getMessages
+      }
+      // quickReplies.list, contacts.exportAll — no meaningful args
+      return [];
     });
     mockUseMutation.mockReturnValue(vi.fn());
   });
@@ -142,13 +147,12 @@ describe("InboxPage", () => {
   });
 
   it("shows select conversation prompt when no conversation selected", () => {
-    let callIndex = 0;
-    mockUseQuery.mockImplementation((_ref: unknown, args: unknown) => {
-      const i = callIndex++;
-      if (i === 0) return mockConversations;
-      if (i === 3) return [];
+    mockUseQuery.mockImplementation((_ref: unknown, args?: unknown) => {
       if (args === "skip") return undefined;
-      return undefined;
+      if (typeof args === "object" && args !== null && "archived" in (args as Record<string, unknown>)) {
+        return (args as { archived: boolean }).archived ? [] : mockConversations;
+      }
+      return [];
     });
     renderInbox();
     expect(screen.getByText(/select a conversation/i)).toBeInTheDocument();
@@ -201,13 +205,12 @@ describe("InboxPage", () => {
       },
       mockConversations[1],
     ];
-    let callIndex = 0;
-    mockUseQuery.mockImplementation((_ref: unknown, args: unknown) => {
-      const i = callIndex++;
-      if (i === 0) return typingConversations;
-      if (i === 3) return [];
+    mockUseQuery.mockImplementation((_ref: unknown, args?: unknown) => {
       if (args === "skip") return undefined;
-      return undefined;
+      if (typeof args === "object" && args !== null && "archived" in (args as Record<string, unknown>)) {
+        return (args as { archived: boolean }).archived ? [] : typingConversations;
+      }
+      return [];
     });
     renderInbox();
     expect(screen.getByText("typing")).toBeInTheDocument();
@@ -221,13 +224,12 @@ describe("InboxPage", () => {
       },
       mockConversations[1],
     ];
-    let callIndex = 0;
-    mockUseQuery.mockImplementation((_ref: unknown, args: unknown) => {
-      const i = callIndex++;
-      if (i === 0) return oldTypingConversations;
-      if (i === 3) return [];
+    mockUseQuery.mockImplementation((_ref: unknown, args?: unknown) => {
       if (args === "skip") return undefined;
-      return undefined;
+      if (typeof args === "object" && args !== null && "archived" in (args as Record<string, unknown>)) {
+        return (args as { archived: boolean }).archived ? [] : oldTypingConversations;
+      }
+      return [];
     });
     renderInbox();
     expect(screen.queryByText("typing")).not.toBeInTheDocument();
@@ -241,16 +243,20 @@ describe("InboxPage", () => {
       conv = mockSelectedConversation,
       qr: unknown[] = [],
     ) {
-      // Track which query we're on per render cycle (4 queries per render)
-      let callIndex = 0;
-      mockUseQuery.mockImplementation((_ref: unknown, args: unknown) => {
-        const i = callIndex % 4;
-        callIndex++;
-        if (i === 0) return mockConversations;
-        if (i === 1) return conv;
-        if (i === 2) return msgs;
-        if (i === 3) return qr;
-        return undefined;
+      mockUseQuery.mockImplementation((_ref: unknown, args?: unknown) => {
+        if (args === "skip") return undefined;
+        if (typeof args === "object" && args !== null) {
+          const a = args as Record<string, unknown>;
+          if ("archived" in a) return (a.archived ? [] : mockConversations);
+          if ("id" in a) return conv; // conversations.get
+          if ("conversationId" in a) return msgs; // conversations.getMessages
+          if ("storageId" in a) return null; // storage.getFileUrl
+          if ("term" in a) return []; // search
+        }
+        // quickReplies.list or contacts.exportAll — no meaningful args
+        // Need to distinguish: quickReplies returns qr, exportAll returns []
+        // Since both are called without args, use a counter for these
+        return qr.length > 0 ? qr : [];
       });
     }
 
@@ -384,17 +390,17 @@ describe("InboxPage", () => {
           mediaType: "image",
         },
       ];
-      // MediaPreview adds a 5th useQuery call per cycle for storage.getFileUrl
-      let callIndex = 0;
-      mockUseQuery.mockImplementation((_ref: unknown, args: unknown) => {
-        const i = callIndex % 5;
-        callIndex++;
-        if (i === 0) return mockConversations;
-        if (i === 1) return mockSelectedConversation;
-        if (i === 2) return messagesWithMedia;
-        if (i === 3) return [];
-        if (i === 4) return null; // storage.getFileUrl
-        return undefined;
+      // Use arg-based mock for media test
+      mockUseQuery.mockImplementation((_ref: unknown, args?: unknown) => {
+        if (args === "skip") return undefined;
+        if (typeof args === "object" && args !== null) {
+          const a = args as Record<string, unknown>;
+          if ("archived" in a) return (a.archived ? [] : mockConversations);
+          if ("id" in a) return mockSelectedConversation;
+          if ("conversationId" in a) return messagesWithMedia;
+          if ("storageId" in a) return null; // storage.getFileUrl
+        }
+        return [];
       });
       renderInbox("/inbox/conv1");
       expect(screen.getByText("Check this out")).toBeInTheDocument();

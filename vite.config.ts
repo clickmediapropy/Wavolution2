@@ -22,6 +22,6 @@ export default defineConfig({
     exclude: ["node_modules", "references/**"],
   },
   lint: {
-    ignorePatterns: ["references/**"],
+    ignorePatterns: ["references/**", "templates/**"],
   },
 });
